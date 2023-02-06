@@ -19,7 +19,7 @@ def gen_pyg_data(tsp_coordinates, k_sparse):
         tsp_coordinates: torch tensor [n_nodes, 2] for node coordinates
     Returns:
         pyg_data: pyg Data instance
-        sparse_distances: distance matrix with non-topk (smallest) values zeroed
+        distances: distance matrix
     '''
     n_nodes = len(tsp_coordinates)
     distances = gen_distance_matrix(tsp_coordinates)
@@ -31,16 +31,22 @@ def gen_pyg_data(tsp_coordinates, k_sparse):
                                 repeats=k_sparse),
         torch.flatten(topk_indices)
         ])
-    # mask = torch.zeros_like(distances)
-    # mask[edge_index[0], edge_index[1]] = 1
-    # sparse_distances = mask * distances
     edge_attr = topk_values.reshape(-1, 1)
     pyg_data = Data(x=tsp_coordinates, edge_index=edge_index, edge_attr=edge_attr)
     return pyg_data, distances
 
 def load_val_dataset(n_node, k_sparse, device):
     val_list = []
-    val_tensor = torch.load(f'data/tsp/valDataset-{n_node}.pt')
+    val_tensor = torch.load(f'../data/tsp/valDataset-{n_node}.pt')
+    for instance in val_tensor:
+        instance = instance.to(device)
+        data, distances = gen_pyg_data(instance, k_sparse=k_sparse)
+        val_list.append((data, distances))
+    return val_list
+
+def load_test_dataset(n_node, k_sparse, device):
+    val_list = []
+    val_tensor = torch.load(f'../data/tsp/testDataset-{n_node}.pt')
     for instance in val_tensor:
         instance = instance.to(device)
         data, distances = gen_pyg_data(instance, k_sparse=k_sparse)
