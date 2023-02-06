@@ -46,6 +46,23 @@ class ACO():
 
         self.device = device
 
+    @torch.no_grad()
+    def sparsify(self, k_sparse):
+        '''
+        Sparsify the TSP graph to obtain the heuristic information 
+        Used for vanilla ACO baselines
+        '''
+        _, topk_indices = torch.topk(self.distances, 
+                                        k=k_sparse, 
+                                        dim=1, largest=False)
+        edge_index_u = torch.repeat_interleave(
+            torch.arange(len(self.distances), device=self.device),
+            repeats=k_sparse
+            )
+        edge_index_v = torch.flatten(topk_indices)
+        sparse_distances = torch.ones_like(self.distances) * 1e10
+        sparse_distances[edge_index_u, edge_index_v] = self.distances[edge_index_u, edge_index_v]
+        self.heuristic = 1 / sparse_distances
     
     def sample(self):
         paths, log_probs = self.gen_path(require_prob=True)
@@ -158,8 +175,9 @@ class ACO():
 
 if __name__ == '__main__':
     torch.set_printoptions(precision=3,sci_mode=False)
-    input = torch.rand(size=(20, 2))
+    input = torch.rand(size=(5, 2))
     distances = torch.norm(input[:, None] - input, dim=2, p=2)
     distances[torch.arange(len(distances)), torch.arange(len(distances))] = 1e10
     aco = ACO(distances)
+    aco.sparsify(k_sparse=3)
     print(aco.run(20))
