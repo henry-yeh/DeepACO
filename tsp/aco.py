@@ -16,16 +16,7 @@ class ACO():
                  max=None,
                  device='cpu'
                  ):
-        """
-        Args:
-            distances (torch.Tensor [n,n]): Square matrix of distances. Diagonal is assumed to be torch.inf.
-            n_ants (int): Number of ants running per iteration
-            n_best (int): Number of best ants who deposit pheromone
-            n_iteration (int): Number of iterations
-            decay (float): Rate it which pheromone decays. The pheromone value is multiplied by decay, so 0.95 will lead to decay, 0.5 to much faster decay.
-            alpha (int or float or trainable torch.Tensor [1,]): exponenet on pheromone, higher alpha gives pheromone more weight. Default=1
-            beta (int or float or trainable torch.Tensor[1,]): exponent on distance, higher beta give distance more weight. Default=1        
-        """
+        
         self.problem_size = len(distances)
         self.distances  = distances
         self.n_ants = n_ants
@@ -34,8 +25,16 @@ class ACO():
         self.beta = beta
         self.elitist = elitist
         self.min_max = min_max
+        
         if min_max:
-            assert min is not None and max is not None and self.min > 1e-9, "Invalid min-max value!"
+            if min is not None:
+                assert min > 1e-9
+            else:
+                min = 0.1
+            if max is not None:
+                assert max <= 1
+            else:
+                max = 0.9
             self.min = min
             self.max = max
 
@@ -66,9 +65,7 @@ class ACO():
                 self.lowest_cost = best_cost
         # Norm
         self.pheromone /= torch.max(self.pheromone)
-        # print(self.lowest_cost.item())
-        # print(self.pheromone[0])
-        # print(self.pheromone[:, 0])
+        
         return self.lowest_cost
        
     
@@ -163,6 +160,6 @@ if __name__ == '__main__':
     torch.set_printoptions(precision=3,sci_mode=False)
     input = torch.rand(size=(20, 2))
     distances = torch.norm(input[:, None] - input, dim=2, p=2)
-    distances[torch.arange(len(distances)), torch.arange(len(distances))] = torch.inf
+    distances[torch.arange(len(distances)), torch.arange(len(distances))] = 1e10
     aco = ACO(distances)
-    aco.run(20)
+    print(aco.run(20))
