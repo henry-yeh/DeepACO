@@ -13,7 +13,6 @@ class ACO():
                  pheromone=None,
                  heuristic=None,
                  min=None,
-                 max=None,
                  device='cpu'
                  ):
         
@@ -31,14 +30,16 @@ class ACO():
                 assert min > 1e-9
             else:
                 min = 0.1
-            if max is not None:
-                assert max <= 1
-            else:
-                max = 0.9
             self.min = min
-            self.max = max
+            self.max = None
+        
+        if pheromone is None:
+            self.pheromone = torch.ones(self.distances.shape, device=device)
+            if min_max:
+                self.pheromone *= self.min
+        else:
+            self.pheromone = pheromone
 
-        self.pheromone = torch.ones(self.distances.shape, device=device) if pheromone is None else pheromone
         self.heuristic = 1 / distances if heuristic is None else heuristic
 
         self.shortest_path = None
@@ -74,12 +75,18 @@ class ACO():
         for _ in range(n_iterations):
             paths = self.gen_path(require_prob=False)
             costs = self.gen_path_costs(paths)
-            self.update_pheronome(paths, costs)
             
             best_cost, best_idx = costs.min(dim=0)
             if best_cost < self.lowest_cost:
                 self.shortest_path = paths[:, best_idx]
                 self.lowest_cost = best_cost
+                if self.min_max:
+                    max = self.problem_size / self.lowest_cost
+                    if self.max is None:
+                        self.pheromone *= max/self.pheromone.max()
+                    self.max = max
+            
+            self.update_pheronome(paths, costs)
         # Norm
         self.pheromone /= torch.max(self.pheromone)
         
