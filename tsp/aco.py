@@ -3,7 +3,8 @@ from torch.distributions import Categorical
 
 class ACO():
 
-    def __init__(self, distances: torch.tensor,
+    def __init__(self, 
+                 distances: torch.tensor,
                  n_ants=20, 
                  decay=0.9,
                  alpha=1,
@@ -34,9 +35,9 @@ class ACO():
             self.max = None
         
         if pheromone is None:
-            self.pheromone = torch.ones(self.distances.shape, device=device)
+            self.pheromone = torch.ones_like(self.distances)
             if min_max:
-                self.pheromone *= self.min
+                self.pheromone = self.pheromone * self.min
         else:
             self.pheromone = pheromone
 
@@ -87,12 +88,9 @@ class ACO():
                     self.max = max
             
             self.update_pheronome(paths, costs)
-        # Norm
-        self.pheromone /= torch.max(self.pheromone)
-        
+
         return self.lowest_cost
        
-    
     @torch.no_grad()
     def update_pheronome(self, paths, costs):
         '''
@@ -116,8 +114,8 @@ class ACO():
                 self.pheromone[torch.roll(path, shifts=1), path] += 1.0/cost
                 
         if self.min_max:
-            self.pheromone[(self.pheromone>1e-9) * (self.pheromone)<self.min] = self.min
-            self.pheromone[self.pheromone<self.max] = self.max
+            self.pheromone[(self.pheromone > 1e-9) * (self.pheromone) < self.min] = self.min
+            self.pheromone[self.pheromone > self.max] = self.max
     
     @torch.no_grad()
     def gen_path_costs(self, paths):
