@@ -72,12 +72,13 @@ class ACO():
             if best_obj > self.alltime_best_obj:
                 self.alltime_best_obj = best_obj
                 self.alltime_best_sol = sols[best_idx.item()]
-    #             if self.min_max: TODO
-    #                 max = self.problem_size / self.lowest_cost
-    #                 if self.max is None:
-    #                     self.pheromone *= max/self.pheromone.max()
-    #                 self.max = max
+                if self.min_max:
+                    max = self.alltime_best_obj * self.n * self.Q
+                    if self.max is None:
+                        self.pheromone *= max/self.pheromone.max()
+                    self.max = max
             self.update_pheronome(sols, objs, best_obj.item(), best_idx.item())
+
         return self.alltime_best_obj, self.alltime_best_sol
        
     
@@ -94,9 +95,9 @@ class ACO():
                 obj = objs[i]
                 self.pheromone[[sol]] += self.Q * obj
                 
-    #     if self.min_max: # TODO
-    #         self.pheromone[(self.pheromone>1e-9) * (self.pheromone)<self.min] = self.min
-    #         self.pheromone[self.pheromone<self.max] = self.max
+        if self.min_max:
+            self.pheromone[(self.pheromone>1e-9) * (self.pheromone)<self.min] = self.min
+            self.pheromone[self.pheromone>self.max] = self.max
     
     @torch.no_grad()
     def gen_sol_obj(self, solutions: list):
