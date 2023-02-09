@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 from queue import LifoQueue
 import numpy as np
+from functools import cached_property
 
 
 class Activity:
@@ -17,13 +18,32 @@ class Activity:
         self.succ.append(other)
         other.pred.append(self)
     
-    @property
+    # def __hash__(self):
+    #     return hash((self.index, self.duration, len(self.succ), len(self.pred), *self.resources))
+    
+    @cached_property
     def latest_start(self):
         return self.latest_finish - self.duration
 
-    @property
+    @cached_property
     def earlist_finish(self):
         return self.earlist_start + self.duration
+    
+    @cached_property
+    def succ_closure(self) -> set[int]:
+        closure = set()
+        for act in self.succ:
+            closure.add(act.index)
+            closure.update(act.succ_closure)
+        return closure
+    
+    @cached_property
+    def indegree(self):
+        return len(self.pred)
+    
+    @cached_property
+    def outdegree(self):
+        return len(self.succ)
 
 
 class Resource:
@@ -73,6 +93,10 @@ class RCPSPInstance:
     @property
     def activity_zero(self):
         return self.activities[0]
+    
+    @property
+    def n(self):
+        return len(self.activities)
 
     def __len__(self):
         return len(self.activities)
@@ -102,13 +126,16 @@ class RCPSPInstance:
                     n.earlist_start = es
                 stack.put(n)
     
-    def get_indegrees(self):
-        return [len(act.pred) for act in self.activities]
+    @property
+    def indegrees(self):
+        return [act.indegree for act in self.activities]
     
-    def get_outdegrees(self):
-        return [len(act.succ) for act in self.activities]
+    @property
+    def outdegrees(self):
+        return [act.outdegree for act in self.activities]
 
-    def get_adjlist(self):
+    @cached_property
+    def adjlist(self):
         adjlist = []
         for act in self.activities:
             adjlist.append([i.index for i in act.succ])
@@ -116,7 +143,7 @@ class RCPSPInstance:
 
     def get_adjmatrix(self):
         mat = np.zeros((len(self), len(self)), dtype=np.uint8)
-        for index, row in enumerate(self.get_adjlist()):
+        for index, row in enumerate(self.adjlist):
             mat[index, row] = 1
         return mat
 
@@ -180,5 +207,5 @@ def read_RCPfile(filepath):
 
 if __name__ == "__main__":
     inst = read_RCPfile("../data/rcpsp/j30rcp/J301_1.RCP")
-    inst.get_adjlist()
     inst.get_adjmatrix()
+    print(inst.activities[10].succ_closure)
