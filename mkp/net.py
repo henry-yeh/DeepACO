@@ -9,7 +9,7 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 class TransformerModel(nn.Module):
 
     def __init__(self, 
-                 ntoken_input = 3,
+                 ntoken_input = 6,
                  d_model = 32, 
                  nhead = 2, 
                  d_hid = 32,
@@ -78,11 +78,12 @@ class ParNet(MLP):
 
 if __name__ == '__main__':
     from utils import gen_instance
-    price, weight = gen_instance(5)
+    m = 5
+    price, weight = gen_instance(m=m)
     src = torch.cat((price.T.unsqueeze(-1), weight.T), dim=-1)
     src.unsqueeze_(1)
     print(src.shape)
     
-    net = TransformerModel()
+    net = TransformerModel(ntoken_input=m+1)
     phe, heu = net(src)
     print(phe, heu)
