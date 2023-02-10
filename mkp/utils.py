@@ -48,22 +48,26 @@ if __name__ == '__main__':
     
     torch.manual_seed(12345)
     dataset_size = {
-        20:100,
+        50:5,
         100:5
         }
-    for problem_size in [20, 100]:
+    for problem_size in [50, 100]:
         testDataset = []
         for _ in range(dataset_size[problem_size]):
-            price, weight = gen_instance(problem_size)
+            price, weight = gen_instance(problem_size, 5)
             testDataset.append(torch.cat((price.unsqueeze(0), weight), dim=0))
         testDataset = torch.stack(testDataset)
         torch.save(testDataset, f'./data/mkp/valDataset-{problem_size}.pt')
     
     torch.manual_seed(123456)
-    for problem_size in [20, 100]:
+    dataset_size = {
+        50:100,
+        100:100
+        }
+    for problem_size in [50, 100]:
         testDataset = []
         for _ in range(dataset_size[problem_size]):
-            price, weight = gen_instance(problem_size)
+            price, weight = gen_instance(problem_size, 5)
             testDataset.append(torch.cat((price.unsqueeze(0), weight), dim=0))
         testDataset = torch.stack(testDataset)
         torch.save(testDataset, f'./data/mkp/testDataset-{problem_size}.pt')
