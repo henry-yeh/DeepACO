@@ -1,8 +1,11 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 from queue import LifoQueue
 import numpy as np
 from functools import cached_property
-
+import glob
+import os
+from torch_geometric.data import Data as PyGData
+import torch
 
 class Activity:
     def __init__(self, index: int, duration: int = 0, resources: Optional[List[int]] = None) -> None:
@@ -18,9 +21,6 @@ class Activity:
         self.succ.append(other)
         other.pred.append(self)
     
-    # def __hash__(self):
-    #     return hash((self.index, self.duration, len(self.succ), len(self.pred), *self.resources))
-    
     @cached_property
     def latest_start(self):
         return self.latest_finish - self.duration
@@ -35,6 +35,14 @@ class Activity:
         for act in self.succ:
             closure.add(act.index)
             closure.update(act.succ_closure)
+        return closure
+
+    @cached_property
+    def pred_closure(self) -> set[int]:
+        closure = set()
+        for act in self.pred:
+            closure.add(act.index)
+            closure.update(act.pred_closure)
         return closure
     
     @cached_property
@@ -141,7 +149,8 @@ class RCPSPInstance:
             adjlist.append([i.index for i in act.succ])
         return adjlist
 
-    def get_adjmatrix(self):
+    @cached_property
+    def adjmatrix(self):
         mat = np.zeros((len(self), len(self)), dtype=np.uint8)
         for index, row in enumerate(self.adjlist):
             mat[index, row] = 1
@@ -163,6 +172,7 @@ class RCPSPInstance:
             # precedence constraint
             for act in node.pred:
                 t = finished_at[act.index]
+
                 if t is None or t > st:
                     # Does not satisfy precedence constraint.
                     return False
@@ -176,7 +186,46 @@ class RCPSPInstance:
                     return False
             finished_at[index] = st + node.duration
         return True
+
+    def get_extended_adjlist(self):
+        allindex = set(range(self.n))
+        extended_adjlist = []
+        for i, act in enumerate(self.activities):
+            no_relation = allindex - act.succ_closure - act.pred_closure
+            no_relation.remove(i)
+            extended_adjlist.append(list(no_relation))
+        return extended_adjlist
+    
+    def to_pyg_data(self, device = "cpu"):
+        # node feature
+        x = self.get_resource_matrix()
+        x = x.astype(np.float32) / np.array(self.capacity)
+        # precedence constraint edges
+        norm_edge_index = adjlist_to_edge_index(self.adjlist)
+        norm_edge_attr = torch.tensor([[1,0]]).float().expand(norm_edge_index.shape[1],2)
+        # extended edges
+        ext_edge_index = adjlist_to_edge_index(self.get_extended_adjlist())
+        ext_edge_attr = torch.tensor([[0,1]]).float().expand(ext_edge_index.shape[1],2)
+        # This extra edge is necessary for the Pooling Layers of PyG to function normally
+        add_edge_index = torch.tensor([[self.n-1], [self.n-1]])
+        add_edge_attr = torch.tensor([[0,0]])
+
+        x = torch.from_numpy(x).float().to(device)
+        edge_index = torch.hstack([norm_edge_index, ext_edge_index, add_edge_index]).to(device)
+        edge_attr = torch.vstack([norm_edge_attr, ext_edge_attr, add_edge_attr]).to(device)
+        return PyGData(x, edge_index, edge_attr)
+
         
+def adjlist_to_edge_index(adjlist):
+    sources = []
+    targets = []
+    for src, tgts in enumerate(adjlist):
+        sources.append(torch.tensor(src, dtype = torch.long).expand(len(tgts)))
+        targets.append(torch.tensor(tgts, dtype = torch.long))
+    sources = torch.concat(sources)
+    targets = torch.concat(targets)
+    edge_index = torch.stack([sources, targets])
+    return edge_index
 
 def readints(f) -> List[int]:
     return list(map(int, f.readline().strip().split()))
@@ -205,7 +254,25 @@ def read_RCPfile(filepath):
 
     return RCPSPInstance(nodes, resource_capacity)
 
+def load_dataset(directory: str, test_size = 100) -> Tuple[list[RCPSPInstance], list[RCPSPInstance]]:
+    """Load a set of RCP files from a folder.
+    Only the first {test_size} files (in lexicographic order) are included in the testset.
+
+    Args:
+        directory (str)
+        test_size (int, optional): Size of testset. Defaults to 100.
+    Returns:
+        trainset (list[RCPSPInstance])
+        testset (list[RCPSPInstance])
+    """
+    files = glob.glob(os.path.join(directory, "*.RCP"))
+    files.sort()
+    data = []
+    for path in files:
+        instance = read_RCPfile(path)
+        data.append(instance)
+    return data[test_size:], data[:test_size]
+
 if __name__ == "__main__":
     inst = read_RCPfile("../data/rcpsp/j30rcp/J301_1.RCP")
-    inst.get_adjmatrix()
-    print(inst.activities[10].succ_closure)
+    inst.to_pyg_data()

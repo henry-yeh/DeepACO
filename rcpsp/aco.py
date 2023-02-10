@@ -105,15 +105,16 @@ class ACO_RCPSP:
                  decay = 0.975,
                  alpha = 1.0,
                  beta = 2.0,
-                 gamma = 1.0,
+                 gamma = 0.0,
                  c = 0.6,
                  Q = 1.0,
-                 min=0.1,
+                 min = 0.1,
                  elitist=False,
                  min_max=False,
-                 pheronome: Optional[torch.Tensor] = None,
+                 pheromone: Optional[torch.Tensor] = None,
                  heuristic: Optional[torch.Tensor] = None,
                  device='cpu',
+                 train = False,
                  ):
         """Implementing ACO-RCPSP algorithm as stated in [1]. Only a partial of the features is implemented.
         
@@ -136,16 +137,17 @@ class ACO_RCPSP:
         self.min = min
         self.max = np.Infinity
         self.gamma = torch.tensor(gamma).to(device)
+        self.train = train
 
         self.epoch = 1
 
-        if pheronome is not None:
-            assert pheronome.shape == (rcpsp.n, rcpsp.n)
-            self.pheronome = pheronome
+        if pheromone is not None:
+            assert pheromone.shape == (rcpsp.n, rcpsp.n)
+            self.pheromone = pheromone
         else:
-            self.pheronome = torch.ones(rcpsp.n, rcpsp.n, dtype=torch.float32, device=device)
+            self.pheromone = torch.ones(rcpsp.n, rcpsp.n, dtype=torch.float32, device=device)
             if self.min_max:
-                self.pheronome *= self.min
+                self.pheromone *= self.min
         
         if heuristic is not None:
             assert heuristic.shape == (rcpsp.n, rcpsp.n)
@@ -153,7 +155,6 @@ class ACO_RCPSP:
         else:
             heuristic = nWRUP_heuristic(self.rcpsp, omega = 0.3)
             heuristic = heuristic / heuristic.max() * nGRPWA_heuristic(self.rcpsp)
-            print(heuristic)
             self.heuristic = heuristic.to(device)
         
         self.routes = torch.zeros(self.n_ants, self.n, dtype=torch.long, device=device)
@@ -167,17 +168,17 @@ class ACO_RCPSP:
         for _ in range(n_iterations):
             self.construct_solutions()
             self.update_cost()
-            self.update_pheronome()
+            self.update_pheromone()
             self.epoch += 1
 
         return self.best_solution
     
-    @torch.no_grad()
     def construct_solutions(self):
-        probmat = self.pheronome.pow(self.alpha) * self.heuristic.pow(self.beta)
+        probmat = self.pheromone.pow(self.alpha) * self.heuristic.pow(self.beta)
         not_visited = torch.ones(self.n_ants, self.n, dtype=torch.bool, device=self.device)
         indegrees = torch.tensor(self.rcpsp.indegrees, dtype=torch.int16).unsqueeze(0).expand(self.n_ants, self.n).to(self.device).contiguous()
         self.routes[:, 0] = prev = torch.tensor([0]).expand(self.n_ants)
+        log_probs = []
         for k in range(self.n-1):
             # update status
             not_visited[self.range_pop, prev] = False
@@ -191,12 +192,12 @@ class ACO_RCPSP:
                 prob = probmat[prev] * mask
             else:
                 # summation evaluation
-                pheronome = self.pheronome[self.routes[:, :k+1]].reshape(self.n_ants, k+1, -1)
+                pheromone = self.pheromone[self.routes[:, :k+1]].reshape(self.n_ants, k+1, -1)
                 if self.gamma != 1:
                     gamma = self.gamma.pow(torch.arange(k, -1, -1, device=self.device)).view(1,k+1,1)
-                    pheronome = pheronome * gamma
-                pheronome = pheronome.sum(dim=1) * mask
-                summation_prob = pheronome.pow(self.alpha) * self.heuristic[prev].pow(self.beta)
+                    pheromone = pheromone * gamma
+                pheromone = pheromone.sum(dim=1) * mask
+                summation_prob = pheromone.pow(self.alpha) * self.heuristic[prev].pow(self.beta)
                 if self.c == 0:
                     prob = summation_prob
                 else:
@@ -205,6 +206,17 @@ class ACO_RCPSP:
                     prob = self.c * direct_prob + (1-self.c) * summation_prob
             dist = Categorical(prob)
             self.routes[:, k+1] = prev = dist.sample()
+            if self.train:
+                log_prob = dist.log_prob(prev)
+                log_probs.append(log_prob)
+        if self.train:
+            return torch.stack(log_probs)
+    
+    def sample(self):
+        self.train = True
+        log_probs = self.construct_solutions()
+        self.update_cost()
+        return self.costs.float(), log_probs
     
     @torch.no_grad()
     def update_cost(self):
@@ -224,25 +236,25 @@ class ACO_RCPSP:
             self.max = self.Q * self.n / best_schedule[-1]
     
     @torch.no_grad()
-    def update_pheronome(self):
-        self.pheronome = self.pheronome * self.decay
+    def update_pheromone(self):
+        self.pheromone = self.pheromone * self.decay
 
         best_route = self.best_solution.route
-        self.pheronome[best_route[:-1], best_route[1:]] += self.Q / self.best_solution.cost
+        self.pheromone[best_route[:-1], best_route[1:]] += self.Q / self.best_solution.cost
 
         if self.elitist:
             bestindex = self.costs.argmin()
             route = self.routes[bestindex]
             cost = self.costs[bestindex]
-            self.pheronome[route[:-1], route[1:]] += self.Q / cost
+            self.pheromone[route[:-1], route[1:]] += self.Q / cost
         else:
             for route, cost in zip(self.routes, self.costs):
-                self.pheronome[route[:-1], route[1:]] += self.Q / cost
+                self.pheromone[route[:-1], route[1:]] += self.Q / cost
         
         if self.min_max:
-            self.pheronome[self.pheronome > self.max] = self.max
-            self.pheronome[self.pheronome < self.min] = self.min
-        
+            self.pheromone[self.pheromone > self.max] = self.max
+            self.pheromone[self.pheromone < self.min] = self.min
+
 
 if __name__ == "__main__":
     from rcpsp_inst import read_RCPfile
@@ -258,7 +270,7 @@ if __name__ == "__main__":
     assert instance.check_schedule(list(result.schedule))
     print(result.schedule)
     print(result.route)
-    print(aco.pheronome.max())
+    print(aco.pheromone.max())
     print(aco.max)
-    plt.imshow(aco.pheronome)
+    plt.imshow(aco.pheromone)
     plt.show()
