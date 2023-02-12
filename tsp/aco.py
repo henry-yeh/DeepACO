@@ -4,7 +4,7 @@ from torch.distributions import Categorical
 class ACO():
 
     def __init__(self, 
-                 distances: torch.tensor,
+                 distances,
                  n_ants=20, 
                  decay=0.9,
                  alpha=1,
