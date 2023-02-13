@@ -1,5 +1,6 @@
 import torch
 from torch_geometric.data import Data
+import pickle
 
 def ordering_constraint_gen(n, rand=0.2):
     r = []
@@ -56,11 +57,24 @@ def gen_pyg_data(distances, adj, device):
     pyg_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
     return pyg_data
 
+def load_test_dataset(n_node, device):
+    with open(f"../data/sop/test{n_node}.pkl", "rb") as f:
+        loaded_list = pickle.load(f)
+    for i in range(len(loaded_list)):
+        for j in range(len(loaded_list[0])):
+            loaded_list[i][j] = loaded_list[i][j].to(device)
+    return loaded_list
+
 if __name__ == "__main__":
-    distances, adj_mat, mask = training_instance_gen(5, 'cpu')
-    pyg_data = gen_pyg_data(distances, adj_mat)
-    from net import Net
-    net = Net()
-    net(pyg_data)
+    torch.manual_seed(123456)
+    problem_sizes = [20, 50, 100]
+    dataset_size = 100
+    for p_size in problem_sizes:
+        dataset = []
+        for _ in range(dataset_size):        
+            distances, adj_mat, mask = training_instance_gen(p_size, 'cpu')
+            dataset.append([distances, adj_mat, mask])
+        with open(f"data/sop/test{p_size}.pkl", "wb") as f:
+            pickle.dump(dataset, f)
     
     
