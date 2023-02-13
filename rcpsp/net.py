@@ -109,13 +109,13 @@ class Net(nn.Module):
             param.requires_grad = False
             
     @staticmethod
-    def reshape(pyg, vertex):
+    def reshape(pyg, vector):
         '''Turn phe/heu vector into matrix with zero padding 
         '''
         n_nodes = pyg.x.shape[0]
         device = pyg.x.device
         matrix = torch.zeros(size=(n_nodes, n_nodes), device=device)
-        matrix[pyg.edge_index[0], pyg.edge_index[1]] = vertex
+        matrix[pyg.edge_index[0], pyg.edge_index[1]] = vector
         return matrix
         
 if __name__=="__main__":
