@@ -155,6 +155,9 @@ class RCPSPInstance:
         for index, row in enumerate(self.adjlist):
             mat[index, row] = 1
         return mat
+    
+    def get_duration(self):
+        return [i.duration for i in self.activities]
 
     def get_resource_matrix(self):
         mat = []
@@ -198,8 +201,11 @@ class RCPSPInstance:
     
     def to_pyg_data(self, device = "cpu"):
         # node feature
-        x = self.get_resource_matrix()
-        x = x.astype(np.float32) / np.array(self.capacity)
+        r = self.get_resource_matrix()
+        r = r.astype(np.float32) / np.array(self.capacity)
+        t = np.array(self.get_duration(), dtype = np.float32)
+        t = t / t.max()
+        x = np.hstack([t.reshape(self.n, 1), r])
         # precedence constraint edges
         norm_edge_index = adjlist_to_edge_index(self.adjlist)
         norm_edge_attr = torch.tensor([[1,0]]).float().expand(norm_edge_index.shape[1],2)

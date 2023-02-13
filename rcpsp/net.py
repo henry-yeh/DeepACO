@@ -6,7 +6,7 @@ from rcpsp_inst import RCPSPInstance
 
 # GNN for edge embeddings
 class EmbNet(nn.Module):
-    def __init__(self, depth=12, feats=4, edge_feats = 2, units=32, act_fn='silu', agg_fn='mean'): # TODO feats=1
+    def __init__(self, depth=12, feats=5, edge_feats = 2, units=32, act_fn='silu', agg_fn='mean'): # TODO feats=1
         super().__init__()
         self.depth = depth
         self.feats = feats
