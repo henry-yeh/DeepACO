@@ -8,3 +8,4 @@
 - [PyTorch Sparse](https://github.com/rusty1s/pytorch_sparse) 0.6.9
 - [PyTorch Geometric](https://github.com/pyg-team/pytorch_geometric) 2.0.4
 - d2l
+- [networkx](https://networkx.org/) 2.8.4
