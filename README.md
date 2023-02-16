@@ -1,4 +1,4 @@
-# MetaACO
+# MetaACO: Neural-enhanced Ant Systems for Combinatorial Optimization
 
 ### Dependencies
 
