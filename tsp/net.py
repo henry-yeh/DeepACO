@@ -81,23 +81,11 @@ class Net(nn.Module):
         self.emb_net = EmbNet()
         self.par_net_phe = ParNet()
         self.par_net_heu = ParNet()
-    def forward(self, pyg, require_phe=False, require_heu=False):
-        '''
-        Args:
-            pyg: torch_geometric.data.Data instance with x, edge_index, and edge attr
-        Returns:
-            phe: pheromone vector, torch tensor [n_nodes * k_sparsification,]
-            heu: heuristic vector [n_nodes * k_sparsification,]
-        '''
-        assert require_heu or require_phe
+    def forward(self, pyg):
         x, edge_index, edge_attr = pyg.x, pyg.edge_index, pyg.edge_attr
         emb = self.emb_net(x, edge_index, edge_attr)
-        phe, heu = None, None
-        if require_phe:
-            phe = self.par_net_phe(emb)
-        if require_heu:
-            heu = self.par_net_heu(emb)
-        return phe, heu
+        heu = self.par_net_heu(emb)
+        return heu
     
     def freeze_gnn(self):
         for param in self.emb_net.parameters():
