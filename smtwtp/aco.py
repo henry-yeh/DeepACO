@@ -38,7 +38,7 @@ class ACO():
             else:
                 min = 0.1
             self.min = min
-            self.max = None
+            self.max = 1
         
         if pheromone is None:
             self.pheromone = torch.ones(size=(self.n+1, self.n+1), device=device) # [n+1, n+1], includes dummy node 0
@@ -70,12 +70,6 @@ class ACO():
             if best_cost < self.lowest_cost:
                 self.best_sol = paths[:, best_idx]
                 self.lowest_cost = best_cost
-                if self.min_max:
-                    max = self.n / self.lowest_cost
-                    if self.max is None:
-                        self.pheromone *= max/self.pheromone.max()
-                    self.max = max
-            
             self.update_pheronome(paths, costs)
         return self.lowest_cost
        
@@ -165,8 +159,8 @@ if __name__ == '__main__':
     torch.set_printoptions(precision=3,sci_mode=False)
     torch.manual_seed(1234)
     from utils import instance_gen
-    due_time, weights, processing_time = instance_gen(n=50, device='cpu')
-    aco = ACO(due_time, weights, processing_time, n_ants=20)
-    for i in range(20):
+    _, due_time, weights, processing_time = instance_gen(n=50, device='cpu')
+    aco = ACO(due_time, weights, processing_time, n_ants=20, elitist=True, min_max=True)
+    for i in range(250):
         cost = aco.run(1)
         print(cost)
