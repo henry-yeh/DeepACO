@@ -153,8 +153,8 @@ class ACO():
             paths_list.append(actions)
             if require_prob:
                 log_probs_list.append(log_probs)
-                mask = mask.clone()
             prev = actions
+            mask = mask.clone()
             mask[torch.arange(self.n_ants, device=self.device), actions] = 0
         
         if require_prob:
@@ -173,7 +173,7 @@ class ACO():
         dist = ((pheromone ** self.alpha) * (heuristic ** self.beta) * mask) # shape: (n_ants, p_size)
         dist = Categorical(dist)
         actions = dist.sample() # shape: (n_ants,)
-        log_probs = dist.log_prob(actions) if require_prob else None # shape: (n_ants,)
+        log_probs = dist.log_prob(actions) if require_prob else None# shape: (n_ants,)
         return actions, log_probs
         
 

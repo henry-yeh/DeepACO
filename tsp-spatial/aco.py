@@ -41,42 +41,39 @@ class ACO():
         else:
             self.pheromone = pheromone
 
-        self.heuristic = 1 / distances if heuristic is None else heuristic
+        self.heuristic_list = heuristic
+        self.n_heads = len(heuristic)
+        self.n_ants_group = self.n_ants // self.n_heads
 
         self.shortest_path = None
         self.lowest_cost = float('inf')
 
         self.device = device
-
-    @torch.no_grad()
-    def sparsify(self, k_sparse):
-        '''
-        Sparsify the TSP graph to obtain the heuristic information 
-        Used for vanilla ACO baselines
-        '''
-        _, topk_indices = torch.topk(self.distances, 
-                                        k=k_sparse, 
-                                        dim=1, largest=False)
-        edge_index_u = torch.repeat_interleave(
-            torch.arange(len(self.distances), device=self.device),
-            repeats=k_sparse
-            )
-        edge_index_v = torch.flatten(topk_indices)
-        sparse_distances = torch.ones_like(self.distances) * 1e10
-        sparse_distances[edge_index_u, edge_index_v] = self.distances[edge_index_u, edge_index_v]
-        self.heuristic = 1 / sparse_distances
     
     def sample(self):
-        paths, log_probs = self.gen_path(require_prob=True)
-        costs = self.gen_path_costs(paths)
-        return costs, log_probs
+        paths_groups = []
+        log_probs_groups = []
+        costs_groups = []
+        for i in range(self.n_heads):
+            paths, log_probs = self.gen_path(i, require_prob=True)
+            costs = self.gen_path_costs(paths)
+            paths_groups.append(paths)
+            log_probs_groups.append(log_probs)
+            costs_groups.append(costs)
+        return costs_groups, log_probs_groups
 
     @torch.no_grad()
     def run(self, n_iterations):
         for _ in range(n_iterations):
-            paths = self.gen_path(require_prob=False)
-            costs = self.gen_path_costs(paths)
-            
+            paths_groups = []
+            costs_groups = []
+            for i in range(self.n_heads):
+                _paths = self.gen_path(i, require_prob=False)
+                _costs = self.gen_path_costs(_paths)
+                paths_groups.append(_paths)
+                costs_groups.append(_costs)
+            paths = torch.cat(paths_groups, dim=1)
+            costs = torch.cat(costs_groups)
             best_cost, best_idx = costs.min(dim=0)
             if best_cost < self.lowest_cost:
                 self.shortest_path = paths[:, best_idx]
@@ -125,22 +122,21 @@ class ACO():
         Returns:
                 Lengths of paths: torch tensor with shape (n_ants,)
         '''
-        assert paths.shape == (self.problem_size, self.n_ants)
         u = paths.T # shape: (n_ants, problem_size)
         v = torch.roll(u, shifts=1, dims=1)  # shape: (n_ants, problem_size)
         assert (self.distances[u, v] > 0).all()
         return torch.sum(self.distances[u, v], dim=1)
 
-    def gen_path(self, require_prob=False):
+    def gen_path(self, i, require_prob=False):
         '''
-        Tour contruction for all ants
+        Tour contruction for ants of group i
         Returns:
             paths: torch tensor with shape (problem_size, n_ants), paths[:, i] is the constructed tour of the ith ant
             log_probs: torch tensor with shape (problem_size, n_ants), log_probs[i, j] is the log_prob of the ith action of the jth ant
         '''
-        start = torch.randint(low=0, high=self.problem_size, size=(self.n_ants,), device=self.device)
-        mask = torch.ones(size=(self.n_ants, self.problem_size), device=self.device)
-        mask[torch.arange(self.n_ants, device=self.device), start] = 0
+        start = torch.randint(low=0, high=self.problem_size, size=(self.n_ants_group,), device=self.device)
+        mask = torch.ones(size=(self.n_ants_group, self.problem_size), device=self.device)
+        mask[torch.arange(self.n_ants_group, device=self.device), start] = 0
         
         paths_list = [] # paths_list[i] is the ith move (tensor) for all ants
         paths_list.append(start)
@@ -149,27 +145,27 @@ class ACO():
         
         prev = start
         for _ in range(self.problem_size-1):
-            actions, log_probs = self.pick_move(prev, mask, require_prob)
+            actions, log_probs = self.pick_move(prev, mask, i, require_prob)
             paths_list.append(actions)
             if require_prob:
                 log_probs_list.append(log_probs)
                 mask = mask.clone()
             prev = actions
-            mask[torch.arange(self.n_ants, device=self.device), actions] = 0
+            mask[torch.arange(self.n_ants_group, device=self.device), actions] = 0
         
         if require_prob:
             return torch.stack(paths_list), torch.stack(log_probs_list)
         else:
             return torch.stack(paths_list)
         
-    def pick_move(self, prev, mask, require_prob):
+    def pick_move(self, prev, mask, i, require_prob):
         '''
         Args:
             prev: tensor with shape (n_ants,), previous nodes for all ants
             mask: bool tensor with shape (n_ants, p_size), masks (0) for the visited cities
         '''
         pheromone = self.pheromone[prev] # shape: (n_ants, p_size)
-        heuristic = self.heuristic[prev] # shape: (n_ants, p_size)
+        heuristic = self.heuristic_list[i][prev] # shape: (n_ants, p_size)
         dist = ((pheromone ** self.alpha) * (heuristic ** self.beta) * mask) # shape: (n_ants, p_size)
         dist = Categorical(dist)
         actions = dist.sample() # shape: (n_ants,)

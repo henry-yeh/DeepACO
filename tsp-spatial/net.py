@@ -76,16 +76,16 @@ class ParNet(MLP):
     
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, n_heads):
         super().__init__()
+        self.n_heads = n_heads
         self.emb_net = EmbNet()
-        self.par_net_phe = ParNet()
-        self.par_net_heu = ParNet()
+        self.par_net_heu = nn.ModuleList([ParNet() for _ in range(n_heads)])
     def forward(self, pyg):
         x, edge_index, edge_attr = pyg.x, pyg.edge_index, pyg.edge_attr
         emb = self.emb_net(x, edge_index, edge_attr)
-        heu = self.par_net_heu(emb)
-        return heu
+        heu_list = [self.par_net_heu[i](emb) for i in range(self.n_heads)]
+        return heu_list
     
     def freeze_gnn(self):
         for param in self.emb_net.parameters():

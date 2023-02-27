@@ -76,15 +76,24 @@ class ParNet(MLP):
     
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, n_stages):
         super().__init__()
         self.emb_net = EmbNet()
-        self.par_net_phe = ParNet()
-        self.par_net_heu = ParNet()
-    def forward(self, pyg):
+        self.par_net_heu_list = nn.ModuleList([ParNet() for _ in range(n_stages)])
+        self.n_stages = n_stages
+    def forward(self, pyg, stage):
+        '''
+        Args:
+            pyg: torch_geometric.data.Data instance with x, edge_index, and edge attr
+            stage: int, e.g., 0~10
+        Returns:
+            phe: pheromone vector, torch tensor [n_nodes * k_sparsification,]
+            heu: heuristic vector [n_nodes * k_sparsification,]
+        '''
+        assert stage < self.n_stages
         x, edge_index, edge_attr = pyg.x, pyg.edge_index, pyg.edge_attr
         emb = self.emb_net(x, edge_index, edge_attr)
-        heu = self.par_net_heu(emb)
+        heu = self.par_net_heu_list[stage](emb)
         return heu
     
     def freeze_gnn(self):
