@@ -3,8 +3,6 @@ from torch import Tensor
 from torch_geometric.data import Data
 
 def gen_prizes(coordinates: Tensor):
-    '''Return randomly generated prizes
-    '''
     n = len(coordinates)
     depot_coor = coordinates[0]
     distances = (coordinates - depot_coor).norm(p=2, dim=-1)
@@ -47,7 +45,7 @@ def gen_pyg_data(tsp_coordinates, k_sparse):
         torch.flatten(topk_indices)
         ])
     edge_attr = topk_values.reshape(-1, 1)
-    pyg_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr) # TODO: x with or without coor
+    pyg_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
     return pyg_data, distances, prizes
 
 def load_val_dataset(n_node, k_sparse, device):
@@ -74,10 +72,10 @@ def load_test_dataset(n_node, k_sparse, device):
 
 if __name__ == "__main__":
     torch.manual_seed(12345)
-    for problem_size in [20, 100 ,500]:
+    for problem_size in [100, 200, 300]:
         coor = torch.rand(size=(30, problem_size, 2))
         torch.save(coor, f"data/op/valDataset-{problem_size}.pt")
     torch.manual_seed(123456)
-    for problem_size in [20, 100 ,500]:
+    for problem_size in [100, 200, 300]:
         coor = torch.rand(size=(100, problem_size, 2))
         torch.save(coor, f"data/op/testDataset-{problem_size}.pt")
