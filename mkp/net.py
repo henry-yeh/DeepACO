@@ -23,7 +23,6 @@ class TransformerModel(nn.Module):
         self.encoder = nn.Linear(ntoken_input, d_model)
         self.d_model = d_model
         self.decoder_heu = ParNet()
-        self.decoder_phe = ParNet()
 
         self.init_weights()
 
@@ -41,9 +40,9 @@ class TransformerModel(nn.Module):
         """
         src = self.encoder(src) * math.sqrt(self.d_model)
         output = self.transformer_encoder(src)
-        phe = self.decoder_phe(output)
-        heu = self.decoder_heu(output)
-        return phe, heu
+        heu = self.decoder_heu(output).squeeze()
+        heu = heu / heu.max()
+        return heu
 
 
 class MLP(nn.Module):

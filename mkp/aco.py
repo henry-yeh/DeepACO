@@ -4,9 +4,9 @@ import numpy as np
 
 class ACO():
 
-    def __init__(self,                # note that constraints are set to 1 after normalize weight 
-                 price: torch.tensor, # shape [n,]
-                 weight: torch.tensor, # shape [m, n]
+    def __init__(self,  # constraints are set to 1 after normalize weight 
+                 price,  # shape [n,]
+                 weight, # shape [m, n]
                  n_ants=20, 
                  decay=0.9,
                  alpha=1,
@@ -18,13 +18,13 @@ class ACO():
                  min=None,
                  device='cpu'
                  ):
-        
-        self.price = price
-        self.weight = weight
+
         self.n = len(price)
         self.m = len(weight)
-        assert self.weight.shape == (self.m, self.n)
         
+        self.price = price
+        self.weight = weight.T # (n, m)
+
         self.n_ants = n_ants
         self.decay = decay
         self.alpha = alpha
@@ -41,23 +41,28 @@ class ACO():
             self.max = None
         
         if pheromone is None:
-            self.pheromone = torch.ones_like(self.price)
+            self.pheromone = torch.ones(size=(self.n+1,), device=device)
             if min_max:
                 self.pheromone = self.pheromone * self.min
         else:
             self.pheromone = pheromone
 
         # Fidanova S. Hybrid ant colony optimization algorithm for multiple knapsack problem
-        self.heuristic = price / weight.sum(dim=0) if heuristic is None else heuristic
+        self.heuristic = price / self.weight.sum(dim=1) if heuristic is None else heuristic
         
         # Leguizamon G, Michalewicz Z. A New Version of Ant System for Subset Problems
         self.Q = 1/self.price.sum()
-        
+
         self.alltime_best_sol = None
         self.alltime_best_obj = 0
-
         self.device = device
-    
+        self.add_dummy_node()
+        
+    def add_dummy_node(self):
+        self.price = torch.cat((self.price, torch.tensor([0.], device=self.device))) # (n+1,)
+        self.weight = torch.cat((self.weight, torch.zeros((1, self.m), device=self.device)), dim=0) # (n+1, m)
+        self.heuristic = torch.cat((self.heuristic, torch.tensor([1e-8], device=self.device))) # (n+1)
+        
     def sample(self):
         sols, log_probs = self.gen_sol(require_prob=True)
         objs = self.gen_sol_obj(sols)
@@ -66,12 +71,13 @@ class ACO():
     @torch.no_grad()
     def run(self, n_iterations):
         for _ in range(n_iterations):
-            sols = self.gen_sol(require_prob=False)
-            objs = self.gen_sol_obj(sols)
-            best_obj, best_idx = torch.stack(objs).max(dim=0)
+            sols = self.gen_sol(require_prob=False) # (n_ants, max_horizon)
+            objs = self.gen_sol_obj(sols)             # (n_ants,)
+            sols = sols.T
+            best_obj, best_idx = objs.max(dim=0)
             if best_obj > self.alltime_best_obj:
                 self.alltime_best_obj = best_obj
-                self.alltime_best_sol = sols[best_idx.item()]
+                self.alltime_best_sol = sols[best_idx]
                 if self.min_max:
                     max = self.alltime_best_obj * self.n * self.Q
                     if self.max is None:
@@ -80,102 +86,113 @@ class ACO():
             self.update_pheronome(sols, objs, best_obj.item(), best_idx.item())
 
         return self.alltime_best_obj, self.alltime_best_sol
-       
-    
+
     @torch.no_grad()
-    def update_pheronome(self, sols: list, objs: list, best_obj: float, best_idx: int):
+    def update_pheronome(self, sols, objs, best_obj, best_idx):
         self.pheromone = self.pheromone * self.decay 
         if self.elitist:
-            best_sol= sols[best_idx]
-            self.pheromone[[best_sol]] += self.Q * best_obj
-        
+            best_sol= sols[best_idx] # max_horizon
+            self.pheromone[best_sol] += self.Q * best_obj
         else:
             for i in range(self.n_ants):
                 sol = sols[i]
                 obj = objs[i]
-                self.pheromone[[sol]] += self.Q * obj
+                self.pheromone[sol] += self.Q * obj
                 
         if self.min_max:
             self.pheromone[(self.pheromone>1e-9) * (self.pheromone)<self.min] = self.min
             self.pheromone[self.pheromone>self.max] = self.max
     
     @torch.no_grad()
-    def gen_sol_obj(self, solutions: list):
-        objs = []
-        for sol in solutions:
-            obj = 0
-            for item in sol:
-                obj += self.price[item]
-            objs.append(obj)
-        return objs
+    def gen_sol_obj(self, solutions):
+        '''
+        Args:
+            solutions: (n_ants, max_horizon)
+        Return:
+            obj: (n_ants,)
+        '''
+        return self.price[solutions.T].sum(dim=1) # (n_ants,)
 
     def gen_sol(self, require_prob=False):
         '''
         Solution contruction for all ants
         '''
-        solutions = []
+        solutions = [] # solutions[i] is the i-th picked item for all ants
         log_probs_list = []
-        for ant in range(self.n_ants):
-            # init
-            log_probs = []
-            solution = []
-            knapsack = torch.zeros(size=(self.m,), device=self.device)  # used capacity
-            mask = torch.ones(size=(self.n,), device=self.device)
-            mask, knapsack = self.update_knapsack(mask, knapsack, new_item=None)
-            done = False
-            # construction
-            while not done:
-                item, log_prob = self.pick_item(mask, require_prob)
-                solution.append(item)
-                log_probs.append(log_prob)
-                mask = mask.clone()
-                mask, knapsack = self.update_knapsack(mask, knapsack, item)
-                done = self.check_done(mask) 
-            solutions.append(solution)
+
+        knapsack = torch.zeros(size=(self.n_ants, self.m), device=self.device)  # used capacity
+        mask = torch.ones(size=(self.n_ants, self.n+1), device=self.device)
+        dummy_mask = torch.ones(size=(self.n_ants, self.n+1), device=self.device)
+        dummy_mask[:, -1] = 0
+        
+        mask, knapsack = self.update_knapsack(mask, knapsack, new_item=None)
+        dummy_mask = self.update_dummy_state(mask, dummy_mask)
+        done = self.check_done(mask)
+        while not done:
+            items, log_probs = self.pick_item(mask, dummy_mask, require_prob)
+            solutions.append(items)
             log_probs_list.append(log_probs)
-            
+            if require_prob:
+                mask = mask.clone()
+                dummy_mask = dummy_mask.clone()
+            mask, knapsack = self.update_knapsack(mask, knapsack, items)
+            dummy_mask = self.update_dummy_state(mask, dummy_mask)
+            done = self.check_done(mask)
         if require_prob:
-            return solutions, log_probs_list  # shape: [n_ant, variable]
+            return torch.stack(solutions), torch.stack(log_probs_list)  # shape: [max_horizon, n_ants]
         else:
-            return solutions
+            return torch.stack(solutions)
     
-    def pick_item(self, mask, require_prob):
-        dist = ((self.pheromone ** self.alpha) * (self.heuristic ** self.beta) * mask) # shape [self.n,]
+    def pick_item(self, mask, dummy_mask, require_prob):
+        phe = self.pheromone.unsqueeze(0).repeat(self.n_ants, 1)
+        heu = self.heuristic.unsqueeze(0).repeat(self.n_ants, 1)
+        dist = ((phe ** self.alpha) * (heu ** self.beta) * mask * dummy_mask) # (n_ants, n+1)
+        # print('heu:', heu[0])
+        # print('mask:', mask[0])
+        # print('dummy_mask:', dummy_mask[0])
+        # print('dist:', dist[0])
         dist = Categorical(dist)
         item = dist.sample()
         log_prob = dist.log_prob(item) if require_prob else None
-        # print(log_prob)
-        return item.item(), log_prob
+        return item, log_prob # (n_ants,)
     
     def check_done(self, mask):
-        # is mask all zero ?
-        return (mask == 0).all()
+        # is mask all zero except for the dummy node?
+        return (mask[:, :-1] == 0).all()
+    
+    def update_dummy_state(self, mask, dummy_mask):
+        finished = (mask[: ,:-1] == 0).all(dim=1)
+        dummy_mask[finished] = 1
+        return dummy_mask
     
     def update_knapsack(self, mask, knapsack, new_item):
+        '''
+        Args:
+            mask: (n_ants, n+1)
+            knapsack: (n_ants, m)
+            new_item: (n_ants)
+        '''
         if new_item is not None:
-            mask[new_item] = 0
-            knapsack += self.weight[:, new_item]
-        for test_idx in torch.nonzero(mask):
-            new_knapsack = knapsack + self.weight[:, test_idx.item()]
-            if not (new_knapsack <= 1).all():
-                mask[test_idx] = 0
+            mask[torch.arange(self.n_ants), new_item] = 0
+            knapsack += self.weight[new_item] # (n_ants, m)
+        for ant_idx in range(self.n_ants):
+            candidates = torch.nonzero(mask[ant_idx]) # (x, 1)
+            if len(candidates) > 1:
+                candidates.squeeze_()
+                test_knapsack = knapsack[ant_idx].unsqueeze(0).repeat(len(candidates), 1) # (x, m)
+                new_knapsack = test_knapsack + self.weight[candidates] # (x, m)
+                infeasible_idx = candidates[(new_knapsack > 1).any(dim=1)]
+                mask[ant_idx, infeasible_idx] = 0
+        mask[:, -1] = 1
         return mask, knapsack
 
 if __name__ == '__main__':
     torch.set_printoptions(precision=3,sci_mode=False)
+    torch.manual_seed(1234)
     from utils import gen_instance
-    price, weight = gen_instance(5)
-    print('price:')
-    print(price)
-    print('weight:')
-    print(weight)
-    
-    aco = ACO(price=price, weight=weight, n_ants=2)
-    solutions, log_probs_list = aco.gen_sol(require_prob=True)
-    
-    print(solutions)
-    print(log_probs_list)
-    
-    objs = aco.gen_sol_obj(solutions)
-    print('objs', objs)
-    print(torch.stack(objs))
+    price, weight = gen_instance(50, 5) 
+    aco = ACO(price=price, weight=weight, n_ants=20)
+    for i in range(100):
+        obj, _ = aco.run(1)
+        print(obj)
+    print(aco.pheromone)
