@@ -38,7 +38,7 @@ class ACO():
             else:
                 min = 0.1
             self.min = min
-            self.max = None
+            self.max = 20
         
         if pheromone is None:
             self.pheromone = torch.ones(size=(self.n+1,), device=device)
@@ -78,11 +78,6 @@ class ACO():
             if best_obj > self.alltime_best_obj:
                 self.alltime_best_obj = best_obj
                 self.alltime_best_sol = sols[best_idx]
-                if self.min_max:
-                    max = self.alltime_best_obj * self.n * self.Q
-                    if self.max is None:
-                        self.pheromone *= max/self.pheromone.max()
-                    self.max = max
             self.update_pheronome(sols, objs, best_obj.item(), best_idx.item())
 
         return self.alltime_best_obj, self.alltime_best_sol
@@ -147,10 +142,6 @@ class ACO():
         phe = self.pheromone.unsqueeze(0).repeat(self.n_ants, 1)
         heu = self.heuristic.unsqueeze(0).repeat(self.n_ants, 1)
         dist = ((phe ** self.alpha) * (heu ** self.beta) * mask * dummy_mask) # (n_ants, n+1)
-        # print('heu:', heu[0])
-        # print('mask:', mask[0])
-        # print('dummy_mask:', dummy_mask[0])
-        # print('dist:', dist[0])
         dist = Categorical(dist)
         item = dist.sample()
         log_prob = dist.log_prob(item) if require_prob else None
