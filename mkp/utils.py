@@ -31,42 +31,33 @@ def reformat(price: Tensor, weight: Tensor):
 
 def load_val_dataset(problem_size, device):
     val_list = []
-    dataset = torch.load(f'../data/mkp/valDataset-{problem_size}.pt', map_location=device)
+    dataset = torch.load(f'./data/mkp/valDataset-{problem_size}.pt', map_location=device)
     for i in range(len(dataset)):
         val_list.append((dataset[i, 0], dataset[i, 1:]))
     return val_list
 
 def load_test_dataset(problem_size, device):
     val_list = []
-    dataset = torch.load(f'../data/mkp/testDataset-{problem_size}.pt', map_location=device)
+    dataset = torch.load(f'./data/mkp/testDataset-{problem_size}.pt', map_location=device)
     for i in range(len(dataset)):
         val_list.append((dataset[i, 0], dataset[i, 1:]))
     return val_list
 
 if __name__ == '__main__':
     # generate val and test dataset
-    
     torch.manual_seed(12345)
-    dataset_size = {
-        50:5,
-        100:5
-        }
-    for problem_size in [50, 100]:
+    for problem_size in [300, 400, 500]:
         testDataset = []
-        for _ in range(dataset_size[problem_size]):
+        for _ in range(30):
             price, weight = gen_instance(problem_size, 5)
             testDataset.append(torch.cat((price.unsqueeze(0), weight), dim=0))
         testDataset = torch.stack(testDataset)
         torch.save(testDataset, f'./data/mkp/valDataset-{problem_size}.pt')
     
     torch.manual_seed(123456)
-    dataset_size = {
-        50:100,
-        100:100
-        }
-    for problem_size in [50, 100]:
+    for problem_size in [300, 400, 500]:
         testDataset = []
-        for _ in range(dataset_size[problem_size]):
+        for _ in range(100):
             price, weight = gen_instance(problem_size, 5)
             testDataset.append(torch.cat((price.unsqueeze(0), weight), dim=0))
         testDataset = torch.stack(testDataset)
