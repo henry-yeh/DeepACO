@@ -63,7 +63,7 @@ def load_test_dataset(n_node, k_sparse, device):
     '''Return [(pyg_data, distance matrix, prizes)]
     '''
     val_list = []
-    val_tensor = torch.load(f'../data/op/testDataset-{n_node}.pt')
+    val_tensor = torch.load(f'./data/op/testDataset-{n_node}.pt')
     for coor in val_tensor:
         coor = coor.to(device)
         data, distances, prizes = gen_pyg_data(coor, k_sparse=k_sparse)
