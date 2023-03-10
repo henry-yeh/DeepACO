@@ -31,6 +31,8 @@ def load_test_dataset(n_node, device):
 
 if __name__ == '__main__':
     torch.manual_seed(123456)
+    import pathlib
+    pathlib.Path('./data/smtwtp').mkdir(parents=False, exist_ok=True) 
     problem_sizes = [50, 100, 500]
     dataset_size = 100
     for p_size in problem_sizes:
