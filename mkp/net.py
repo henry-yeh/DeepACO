@@ -1,50 +1,50 @@
-import math
-
 import torch
-from torch import nn, Tensor
-import torch.nn.functional as F
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
+from torch import nn
+from torch.nn import functional as F
+from copy import deepcopy
+import torch_geometric.nn as gnn
 
-
-class TransformerModel(nn.Module):
-
-    def __init__(self, 
-                 ntoken_input = 6,
-                 d_model = 32, 
-                 nhead = 2, 
-                 d_hid = 32,
-                 nlayers = 3,
-                 dropout = 0
-                 ):
+# GNN for edge embeddings
+class EmbNet(nn.Module):
+    def __init__(self, depth=12, feats=5, units=32, act_fn='silu', agg_fn='mean'):
         super().__init__()
-        self.model_type = 'Transformer'
-        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder = nn.Linear(ntoken_input, d_model)
-        self.d_model = d_model
-        self.decoder_heu = ParNet()
+        self.depth = depth
+        self.feats = feats
+        self.units = units
+        self.act_fn = getattr(F, act_fn)
+        self.agg_fn = getattr(gnn, f'global_{agg_fn}_pool')
+        self.v_lin0 = nn.Linear(self.feats, self.units)
+        self.v_lins1 = nn.ModuleList([nn.Linear(self.units, self.units) for i in range(self.depth)])
+        self.v_lins2 = nn.ModuleList([nn.Linear(self.units, self.units) for i in range(self.depth)])
+        self.v_lins3 = nn.ModuleList([nn.Linear(self.units, self.units) for i in range(self.depth)])
+        self.v_lins4 = nn.ModuleList([nn.Linear(self.units, self.units) for i in range(self.depth)])
+        self.v_bns = nn.ModuleList([gnn.BatchNorm(self.units) for i in range(self.depth)])
+        self.e_lin0 = nn.Linear(1, self.units)
+        self.e_lins0 = nn.ModuleList([nn.Linear(self.units, self.units) for i in range(self.depth)])
+        self.e_bns = nn.ModuleList([gnn.BatchNorm(self.units) for i in range(self.depth)])
+    def reset_parameters(self):
+        raise NotImplementedError
+    def forward(self, x, edge_index, edge_attr):
+        x = x
+        w = edge_attr
+        x = self.v_lin0(x)
+        x = self.act_fn(x)
+        w = self.e_lin0(w)
+        w = self.act_fn(w)
+        for i in range(self.depth):
+            x0 = x
+            x1 = self.v_lins1[i](x0)
+            x2 = self.v_lins2[i](x0)
+            x3 = self.v_lins3[i](x0)
+            x4 = self.v_lins4[i](x0)
+            w0 = w
+            w1 = self.e_lins0[i](w0)
+            w2 = torch.sigmoid(w0)
+            x = x0 + self.act_fn(self.v_bns[i](x1 + self.agg_fn(w2 * x2[edge_index[1]], edge_index[0])))
+            w = w0 + self.act_fn(self.e_bns[i](w1 + x3[edge_index[0]] + x4[edge_index[1]]))
+        return w
 
-        self.init_weights()
-
-    def init_weights(self) -> None:
-        initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-
-    def forward(self, src: Tensor) -> Tensor:
-        """
-        Args:
-            src: Tensor, shape [seq_len, batch_size]
-
-        Returns:
-            output Tensor of shape [seq_len, batch_size, ntoken]
-        """
-        src = self.encoder(src) * math.sqrt(self.d_model)
-        output = self.transformer_encoder(src)
-        heu = self.decoder_heu(output).squeeze()
-        heu = heu / heu.max()
-        return heu
-
-
+# general class for MLP
 class MLP(nn.Module):
     @property
     def device(self):
@@ -67,7 +67,7 @@ class MLP(nn.Module):
 
 # MLP for predicting parameterization theta
 class ParNet(MLP):
-    def __init__(self, depth=3, units=32, preds=1, act_fn='relu'):
+    def __init__(self, depth=3, units=32, preds=1, act_fn='silu'):
         self.units = units
         self.preds = preds
         super().__init__([self.units] * depth + [self.preds], act_fn)
@@ -75,14 +75,29 @@ class ParNet(MLP):
         return super().forward(x).squeeze(dim = -1)
     
 
-if __name__ == '__main__':
-    from utils import gen_instance
-    m = 5
-    price, weight = gen_instance(m=m)
-    src = torch.cat((price.T.unsqueeze(-1), weight.T), dim=-1)
-    src.unsqueeze_(1)
-    print(src.shape)
+class Net(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.emb_net = EmbNet()
+        self.par_net_phe = ParNet()
+        self.par_net_heu = ParNet()
+    def forward(self, pyg):
+        x, edge_index, edge_attr = pyg.x, pyg.edge_index, pyg.edge_attr
+        emb = self.emb_net(x, edge_index, edge_attr)
+        heu = self.par_net_heu(emb)
+        return heu
     
-    net = TransformerModel(ntoken_input=m+1)
-    phe, heu = net(src)
-    print(phe, heu)
+    def freeze_gnn(self):
+        for param in self.emb_net.parameters():
+            param.requires_grad = False
+            
+    @staticmethod
+    def reshape(pyg, vector):
+        '''Turn heu vector into matrix with zero padding 
+        '''
+        n_nodes = pyg.x.shape[0]
+        device = pyg.x.device
+        matrix = torch.zeros(size=(n_nodes, n_nodes), device=device)
+        matrix[pyg.edge_index[0], pyg.edge_index[1]] = vector
+        return matrix
+        
