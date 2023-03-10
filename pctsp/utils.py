@@ -49,6 +49,8 @@ def load_test_dataset(n_node, device):
 
 if __name__ == "__main__":
     torch.manual_seed(123456)
+    import pathlib
+    pathlib.Path('./data/pctsp').mkdir(parents=False, exist_ok=True) 
     for n in [20, 100, 500]:
         testDataset = []
         for _ in range(100):

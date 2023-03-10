@@ -40,6 +40,8 @@ def load_test_dataset(problem_size, device):
     return test_list
 
 if __name__ == '__main__':
+    import pathlib
+    pathlib.Path('./data/cvrp').mkdir(parents=False, exist_ok=True) 
     torch.manual_seed(123456)
     for n in [20, 100, 500]:
         inst_list = []
