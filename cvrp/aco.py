@@ -206,7 +206,7 @@ class ACO():
     
     # ======== code for adaptive elitist AS ========
     def get_subroutes(self, route, end_with_zero = True):
-        x = (route == 0).nonzero().flatten()
+        x = torch.nonzero(route == 0).flatten()
         subroutes = []
         for i, j in zip(x, x[1:]):
             if j-i>1:
@@ -217,7 +217,7 @@ class ACO():
 
     def insertion_single(self, route, index):
         # route starts from 0, terminates with 0
-        insertion_cost = (((distances[p1, index]+distances[index,p2]-distances[p1, p2]).item(), i) 
+        insertion_cost = (((self.distances[p1, index]+self.distances[index,p2]-self.distances[p1, p2]).item(), i) 
                           for i,(p1,p2) in enumerate(zip(route,route[1:])))
         min_deltacost, min_index = min(insertion_cost)
         return min_index, min_deltacost
@@ -275,11 +275,11 @@ class ACO():
             subroutes = subroutes[:]
             source_route, target_route = subroutes[sri], subroutes[tri]
             node = subroutes[sri][sni]
-            subroutes[tri] = torch.concat([target_route[:tni], node.unsqueeze(0), target_route[tni:]])
+            subroutes[tri] = torch.cat([target_route[:tni], node.unsqueeze(0), target_route[tni:]])
             if len(subroutes[sri])==3:
                 del subroutes[sri]
             else:
-                subroutes[sri] = torch.concat([source_route[:sni], source_route[sni+1:]])
+                subroutes[sri] = torch.cat([source_route[:sni], source_route[sni+1:]])
             return subroutes, best_insertion[1]
         else:
             return best_insertion

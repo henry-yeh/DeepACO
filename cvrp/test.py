@@ -9,7 +9,7 @@ from utils import *
 torch.manual_seed(1234)
 
 EPS = 1e-10
-device = 'cuda:0'
+device = 'cpu'
 
 def infer_instance(model, demands, distances, n_ants, t_aco_diff):
     if model:
