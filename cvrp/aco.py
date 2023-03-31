@@ -84,18 +84,18 @@ class ACO():
                 self.shortest_path = paths[:, best_idx]
                 self.lowest_cost = best_cost
                 if self.adaptive:
-                    self.intensification_phase()
+                    self.intensification_phase(paths, costs, best_idx)
                 if self.min_max:
                     max = self.problem_size / self.lowest_cost
                     if self.max is None:
-                        self.pheromone *= max/self.pheromone.max()
+                        self.pheromone *= max / self.pheromone.max()
                     self.max = max
                 improved = True
 
             if not self.adaptive or improved:           
                 self.update_pheronome(paths, costs)
                 if self.adaptive:
-                    self.elite_pool.insert(0, (paths[:, best_idx].clone(), best_cost))
+                    self.elite_pool.insert(0, (self.shortest_path, self.lowest_cost))
                     if len(self.elite_pool) > 5:  # pool_size = 5
                         del self.elite_pool[5:]
             else:
@@ -136,7 +136,7 @@ class ACO():
         return torch.sum(self.distances[u[:, :-1], v[:, :-1]], dim=1)
 
     def gen_path(self, require_prob=False):
-        actions = torch.zeros((self.n_ants,), dtype=torch.long ,device=self.device)
+        actions = torch.zeros((self.n_ants,), dtype=torch.long, device=self.device)
         visit_mask = torch.ones(size=(self.n_ants, self.problem_size), device=self.device)
         visit_mask = self.update_visit_mask(visit_mask, actions)
         used_capacity = torch.zeros(size=(self.n_ants,), device=self.device)
@@ -333,9 +333,14 @@ class ACO():
             return best_insertion
 
     @torch.no_grad()
-    def improvement_phase(self, paths, costs):
+    def improvement_phase(self, paths, costs, topk = 5):
         # local search
-        for i in range(paths.size(1)):
+        if topk <= 0 or topk >= self.n_ants:
+            target_indexes = range(paths.size(1))
+        else:
+            target_indexes = costs.topk(5, largest=False).indices
+
+        for i in target_indexes:
             subroutes = self.get_subroutes(paths[:, i], end_with_zero=False)
             # ILS
             pass
@@ -351,7 +356,7 @@ class ACO():
                 costs[i] = new_cost
     
     @torch.no_grad()
-    def intensification_phase(self):
+    def intensification_phase(self, paths, costs, best_idx):
         ogroute, ogcost = self.shortest_path, self.lowest_cost
         subroutes = self.get_subroutes(ogroute, end_with_zero=True)
         demands = torch.tensor([self.demand[r].sum() for r in subroutes])
@@ -365,7 +370,9 @@ class ACO():
             #     print(func.__name__, *route, cost, sep='\n')
         if best_neighbour[0] is not None:
             self.shortest_path = self.merge_subroutes(best_neighbour[0], self.shortest_path.size(0))
-            self.lowest_cost = self.lowest_cost + best_neighbour[1]
+            self.lowest_cost = ogcost + best_neighbour[1]
+            paths[:, best_idx] = self.shortest_path
+            costs[best_idx] = self.lowest_cost
 
     @torch.no_grad()
     def diversification_phase(self):
@@ -377,6 +384,7 @@ class ACO():
 
 if __name__=="__main__":
     from utils import gen_instance
+    import time
     n=50
     demands, distances = gen_instance(n, 'cpu')
     aco = ACO(
@@ -384,12 +392,19 @@ if __name__=="__main__":
         demand=demands,
         adaptive=True
     )
+    start = time.time()
     print(aco.run(30))
+    print(time.time() - start)
     print(aco.shortest_path)
+    # verify cost calculation
+    print(aco.distances[aco.shortest_path[:-1], aco.shortest_path[1:]].sum())
+    print()
 
     aco = ACO(
         distances=distances,
         demand=demands
     )
-    print(aco.run(30))
+    start = time.time()
+    print(aco.run(60))
+    print(time.time() - start)
     print(aco.shortest_path)
