@@ -1,6 +1,10 @@
 import torch
+import numpy as np
+import numba as nb
 from torch.distributions import Categorical
-from two_opt import batched_two_opt_torch
+from two_opt import batched_two_opt_python
+import random
+import concurrent.futures
 
 class ACO():
 
@@ -76,9 +80,15 @@ class ACO():
         return costs, log_probs
 
     @torch.no_grad()
-    def run(self, n_iterations):
+    def run(self, n_iterations, inference = False):
         for _ in range(n_iterations):
-            paths = self.gen_path(require_prob=False)
+            if inference:
+                probmat = (self.pheromone ** self.alpha) * (self.heuristic ** self.beta)
+
+                paths = inference_batch_sample(probmat.cpu().numpy(), self.n_ants, 0)
+                paths = torch.from_numpy(paths.T.astype(np.int64)).to(self.device)
+            else:
+                paths = self.gen_path(require_prob=False)
 
             if self.two_opt:
                 paths = self.local_search(paths)
@@ -185,13 +195,47 @@ class ACO():
         return actions, log_probs
     
     def local_search(self, paths):
-        paths, iterations = batched_two_opt_torch(self.distances, paths.T, device=self.device)
-        return paths.T
+        paths = batched_two_opt_python(self.distances.cpu().numpy(), paths.T.cpu().numpy())
+        return torch.from_numpy(paths.T.astype(np.int64)).to(self.device)
 
-        
+@nb.jit(nb.uint16[:](nb.float32[:,:],nb.int64), nopython=True, nogil=True)
+def _inference_sample(probmat: np.ndarray, startnode = 0):
+    n = probmat.shape[0]
+    route = np.zeros(n, dtype=np.uint16)
+    mask = np.ones(n, dtype=np.uint8)
+    route[0] = lastnode = startnode   # fixed starting node
+    for j in range(1, n):
+        mask[lastnode] = 0
+        prob = probmat[lastnode] * mask
+        rand = random.random() * prob.sum()
+        for k in range(n):
+            rand -= prob[k]
+            if rand <= 0:
+                break
+        lastnode = route[j] = k
+    return route
+
+
+def inference_batch_sample(probmat: np.ndarray, count=1, startnode = 0):
+    n = probmat.shape[0]
+    routes = np.zeros((count, n), dtype=np.uint16)
+    probmat = probmat.astype(np.float32)
+    if count <= 4 and n < 500:
+        for i in range(count):
+            routes[i] = _inference_sample(probmat, startnode)
+    else:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for i in range(count):
+                future = executor.submit(_inference_sample, probmat, startnode)
+                futures.append(future)
+            for i, future in enumerate(futures):
+                routes[i] = future.result()
+    return routes
 
 
 if __name__ == '__main__':
+    import timeit
     n = 100
     torch.set_printoptions(precision=3, sci_mode=False)
     input = torch.rand(size=(n, 2))
@@ -199,5 +243,12 @@ if __name__ == '__main__':
     distances[torch.arange(len(distances)), torch.arange(len(distances))] = 1e10
     aco = ACO(distances, two_opt=True, device='cpu')
     aco.sparsify(k_sparse=3)
-    print(aco.run(20))
+    print(timeit.timeit(lambda: aco.run(20, inference=True), number=1))
+    print(timeit.timeit(lambda: aco.run(20, inference=False), number=1))
     print(aco.shortest_path)
+    print(aco.lowest_cost)
+    # probmat = 1 / (distances+1e-5)
+    # t = timeit.timeit(lambda: inference_batch_sample(probmat.numpy(), 4, 0), number=100)
+    # print("execution:", t)
+
+    
