@@ -156,7 +156,8 @@ class ACO():
             paths: torch tensor with shape (problem_size, n_ants), paths[:, i] is the constructed tour of the ith ant
             log_probs: torch tensor with shape (problem_size, n_ants), log_probs[i, j] is the log_prob of the ith action of the jth ant
         '''
-        start = torch.randint(low=0, high=self.problem_size, size=(self.n_ants,), device=self.device)
+        start = torch.zeros((self.n_ants, ), dtype = torch.long, device=self.device)
+        # start = torch.randint(low=0, high=self.problem_size, size=(self.n_ants,), device=self.device)
         mask = torch.ones(size=(self.n_ants, self.problem_size), device=self.device)
         mask[torch.arange(self.n_ants, device=self.device), start] = 0
         
@@ -189,13 +190,14 @@ class ACO():
         pheromone = self.pheromone[prev] # shape: (n_ants, p_size)
         heuristic = self.heuristic[prev] # shape: (n_ants, p_size)
         dist = ((pheromone ** self.alpha) * (heuristic ** self.beta) * mask) # shape: (n_ants, p_size)
-        dist = Categorical(dist)
+        dist = dist / dist.sum(axis=-1, keepdims=True)
+        dist = Categorical(dist, validate_args=False)
         actions = dist.sample() # shape: (n_ants,)
         log_probs = dist.log_prob(actions) if require_prob else None # shape: (n_ants,)
         return actions, log_probs
     
     def local_search(self, paths):
-        paths = batched_two_opt_python(self.distances.cpu().numpy(), paths.T.cpu().numpy())
+        paths = batched_two_opt_python(self.distances.cpu().numpy(), paths.T.cpu().numpy(), max_iterations=100)
         return torch.from_numpy(paths.T.astype(np.int64)).to(self.device)
 
 @nb.jit(nb.uint16[:](nb.float32[:,:],nb.int64), nopython=True, nogil=True)

@@ -150,7 +150,8 @@ def _two_opt_python(distmat, tour, max_iterations=1000):
             for j in range(i + 1, n):
                 node_i, node_j = tour[i], tour[j]
                 node_prev, node_next = tour[i-1], tour[(j+1) % n]
-                assert node_prev != node_j and node_next != node_i
+                if node_prev == node_j or node_next == node_i:
+                    continue
                 change = (  distmat[node_prev, node_j] 
                           + distmat[node_i, node_next]
                           - distmat[node_prev, node_i] 
