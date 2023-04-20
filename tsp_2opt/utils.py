@@ -1,3 +1,4 @@
+import os
 import torch
 from torch_geometric.data import Data
 
@@ -42,20 +43,25 @@ def gen_pyg_data(tsp_coordinates, k_sparse, start_node = None):
     return pyg_data, distances
 
 def load_val_dataset(n_node, k_sparse, device, start_node = None):
+    if not os.path.isfile(f'../data/tsp/valDataset-{n_node}.pt'):
+        val_tensor = torch.rand((50, n_node, 2))
+        torch.save(val_tensor, f'../data/tsp/valDataset-{n_node}.pt')
+    else:
+        val_tensor = torch.load(f'../data/tsp/valDataset-{n_node}.pt')
+
     val_list = []
-    val_tensor = torch.load(f'../data/tsp/valDataset-{n_node}.pt')
     for instance in val_tensor:
         instance = instance.to(device)
         data, distances = gen_pyg_data(instance, k_sparse=k_sparse, start_node = start_node)
         val_list.append((data, distances))
     return val_list
 
-def load_test_dataset(n_node, k_sparse, device):
+def load_test_dataset(n_node, k_sparse, device, start_node = None):
     val_list = []
     val_tensor = torch.load(f'../data/tsp/testDataset-{n_node}.pt')
     for instance in val_tensor:
         instance = instance.to(device)
-        data, distances = gen_pyg_data(instance, k_sparse=k_sparse)
+        data, distances = gen_pyg_data(instance, k_sparse=k_sparse, start_node = start_node)
         val_list.append((data, distances))
     return val_list
 

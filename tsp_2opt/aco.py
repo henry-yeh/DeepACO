@@ -74,17 +74,23 @@ class ACO():
         sparse_distances[edge_index_u, edge_index_v] = self.distances[edge_index_u, edge_index_v]
         self.heuristic = 1 / sparse_distances
     
-    def sample(self):
-        paths, log_probs = self.gen_path(require_prob=True)
-        costs = self.gen_path_costs(paths)
-        return costs, log_probs
+    def sample(self, inference = False):
+        if inference:
+            probmat = (self.pheromone ** self.alpha) * (self.heuristic ** self.beta)
+            paths = inference_batch_sample(probmat.cpu().numpy(), self.n_ants, 0)
+            paths = torch.from_numpy(paths.T.astype(np.int64)).to(self.device)
+            costs = self.gen_path_costs(paths)
+            return costs, None
+        else:
+            paths, log_probs = self.gen_path(require_prob=True)
+            costs = self.gen_path_costs(paths)
+            return costs, log_probs
 
     @torch.no_grad()
     def run(self, n_iterations, inference = False):
         for _ in range(n_iterations):
             if inference:
                 probmat = (self.pheromone ** self.alpha) * (self.heuristic ** self.beta)
-
                 paths = inference_batch_sample(probmat.cpu().numpy(), self.n_ants, 0)
                 paths = torch.from_numpy(paths.T.astype(np.int64)).to(self.device)
             else:
@@ -148,6 +154,13 @@ class ACO():
         v = torch.roll(u, shifts=1, dims=1)  # shape: (n_ants, problem_size)
         assert (self.distances[u, v] > 0).all()
         return torch.sum(self.distances[u, v], dim=1)
+    
+    def regressive_gen_path(self):
+        start = torch.zeros((self.n_ants, ), dtype = torch.long, device=self.device)
+        mask = torch.ones(size=(self.n_ants, self.problem_size), device=self.device, dtype = torch.bool)
+        pass
+
+
 
     def gen_path(self, require_prob=False):
         '''
@@ -159,42 +172,33 @@ class ACO():
         start = torch.zeros((self.n_ants, ), dtype = torch.long, device=self.device)
         # start = torch.randint(low=0, high=self.problem_size, size=(self.n_ants,), device=self.device)
         mask = torch.ones(size=(self.n_ants, self.problem_size), device=self.device)
-        mask[torch.arange(self.n_ants, device=self.device), start] = 0
+        index = torch.arange(self.n_ants, device=self.device)
+        prob_mat = (self.pheromone ** self.alpha) * (self.heuristic ** self.beta)
+
+        mask[index, start] = 0
         
         paths_list = [] # paths_list[i] is the ith move (tensor) for all ants
         paths_list.append(start)
         
         log_probs_list = [] # log_probs_list[i] is the ith log_prob (tensor) for all ants' actions
-        
         prev = start
         for _ in range(self.problem_size-1):
-            actions, log_probs = self.pick_move(prev, mask, require_prob)
+            dist = prob_mat[prev] * mask
+            dist = dist / dist.sum(axis=-1, keepdims=True)
+            dist = Categorical(dist, validate_args=False)
+            actions = dist.sample() # shape: (n_ants,)
             paths_list.append(actions)
             if require_prob:
+                log_probs = dist.log_prob(actions) # shape: (n_ants,)
                 log_probs_list.append(log_probs)
                 mask = mask.clone()
             prev = actions
-            mask[torch.arange(self.n_ants, device=self.device), actions] = 0
+            mask[index, actions] = 0
         
         if require_prob:
             return torch.stack(paths_list), torch.stack(log_probs_list)
         else:
             return torch.stack(paths_list)
-        
-    def pick_move(self, prev, mask, require_prob):
-        '''
-        Args:
-            prev: tensor with shape (n_ants,), previous nodes for all ants
-            mask: bool tensor with shape (n_ants, p_size), masks (0) for the visited cities
-        '''
-        pheromone = self.pheromone[prev] # shape: (n_ants, p_size)
-        heuristic = self.heuristic[prev] # shape: (n_ants, p_size)
-        dist = ((pheromone ** self.alpha) * (heuristic ** self.beta) * mask) # shape: (n_ants, p_size)
-        dist = dist / dist.sum(axis=-1, keepdims=True)
-        dist = Categorical(dist, validate_args=False)
-        actions = dist.sample() # shape: (n_ants,)
-        log_probs = dist.log_prob(actions) if require_prob else None # shape: (n_ants,)
-        return actions, log_probs
     
     def local_search(self, paths):
         paths = batched_two_opt_python(self.distances.cpu().numpy(), paths.T.cpu().numpy(), max_iterations=100)
