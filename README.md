@@ -9,3 +9,5 @@
 - [PyTorch Geometric](https://github.com/pyg-team/pytorch_geometric) 2.0.4
 - d2l
 - [networkx](https://networkx.org/) 2.8.4
+- [numpy](https://numpy.org/) 1.23.3
+- [numba](https://numba.pydata.org/) 0.56.4
