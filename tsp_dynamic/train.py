@@ -1,9 +1,8 @@
 import time
 import torch
-from torch.distributions import Categorical, kl
 from net import Net
 from aco import Dynamic_AS as ACO
-from utils import gen_pyg_data, load_val_dataset
+from utils import load_val_dataset
 
 torch.manual_seed(1234)
 
