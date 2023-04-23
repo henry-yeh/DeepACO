@@ -7,8 +7,6 @@ from utils import load_val_dataset
 torch.manual_seed(1234)
 
 lr = 3e-4
-EPS = 1e-10
-T=5
 device = 'cuda:0'
 TEST_SIZE = 50
 
@@ -36,8 +34,6 @@ def train_instance(models, optimizer, data, n_ants, k_sparse):
     for model in models:
         torch.nn.utils.clip_grad_norm_(parameters = model.parameters(), max_norm = 1.0, norm_type = 2)
     optimizer.step()
-    
-    # print(print_costs / batch_size)
 
 def infer_instance(nets, coor, n_ants, k_sparse):
     nets.eval()
@@ -48,7 +44,7 @@ def infer_instance(nets, coor, n_ants, k_sparse):
         device=device,
         n_ants=n_ants
     )
-    costs, log_probs = aco.sample(require_prob=False)
+    costs, _ = aco.sample(require_prob=False)
     baseline = costs.mean()
     best_sample_cost = torch.min(costs)
     return baseline.item(), best_sample_cost.item()
@@ -56,7 +52,6 @@ def infer_instance(nets, coor, n_ants, k_sparse):
 def generate_traindata(count, n_node):
     for _ in range(count):
         instance = torch.rand(size=(n_node, 2), device=device)
-        # yield gen_pyg_data(instance, k_sparse=k_sparse, start_node=0)
         yield instance
 
 def train_epoch(n_node, n_ants, k_sparse, steps_per_epoch, nets, optimizer, batch_size):
@@ -93,7 +88,7 @@ def train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size, n_stage
         validation(n_ants, epoch, nets, val_dataset, k_sparse)
     print('total training duration:', sum_time)
         
-    # torch.save(net.state_dict(), f'../pretrained/tsp_2opt/tsp{n_node}.pt')
+    # torch.save(net.state_dict(), f'../pretrained/tsp_dyna/tsp{n_node}.pt')
     
 if __name__ == '__main__':
     n_node = 200
