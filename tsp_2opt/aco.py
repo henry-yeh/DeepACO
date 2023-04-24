@@ -80,11 +80,17 @@ class ACO():
             paths = inference_batch_sample(probmat.cpu().numpy(), self.n_ants, 0)
             paths = torch.from_numpy(paths.T.astype(np.int64)).to(self.device)
             costs = self.gen_path_costs(paths)
-            return costs, None
+            return costs, None, paths
         else:
             paths, log_probs = self.gen_path(require_prob=True)
             costs = self.gen_path_costs(paths)
-            return costs, log_probs
+            return costs, log_probs, paths
+    
+    def sample_2opt(self, paths):
+        paths = self.local_search(paths)
+        costs = self.gen_path_costs(paths)
+        return costs, paths
+        
 
     @torch.no_grad()
     def run(self, n_iterations, inference = False):
@@ -104,7 +110,7 @@ class ACO():
             best_cost, best_idx = costs.min(dim=0)
             if best_cost < self.lowest_cost:
                 self.shortest_path = paths[:, best_idx]
-                self.lowest_cost = best_cost
+                self.lowest_cost = best_cost.item()
                 if self.min_max:
                     max = self.problem_size / self.lowest_cost
                     if self.max is None:
@@ -201,8 +207,10 @@ class ACO():
             return torch.stack(paths_list)
     
     def local_search(self, paths):
-        paths = batched_two_opt_python(self.distances.cpu().numpy(), paths.T.cpu().numpy(), max_iterations=100)
-        return torch.from_numpy(paths.T.astype(np.int64)).to(self.device)
+        new_paths = batched_two_opt_python(self.distances.cpu().numpy(), paths.T.cpu().numpy(), max_iterations=self.problem_size//2)
+        new_paths = torch.from_numpy(new_paths.T.astype(np.int64)).to(self.device)
+        # paths[:self.n_ants//2] = new_paths
+        return new_paths
 
 @nb.jit(nb.uint16[:](nb.float32[:,:],nb.int64), nopython=True, nogil=True)
 def _inference_sample(probmat: np.ndarray, startnode = 0):
@@ -222,18 +230,22 @@ def _inference_sample(probmat: np.ndarray, startnode = 0):
     return route
 
 
-def inference_batch_sample(probmat: np.ndarray, count=1, startnode = 0):
+def inference_batch_sample(probmat: np.ndarray, count=1, startnode = None):
     n = probmat.shape[0]
     routes = np.zeros((count, n), dtype=np.uint16)
     probmat = probmat.astype(np.float32)
+    if startnode is None:
+        startnode = np.random.randint(0, n, size=count)
+    else:
+        startnode = np.ones(count) * startnode
     if count <= 4 and n < 500:
         for i in range(count):
-            routes[i] = _inference_sample(probmat, startnode)
+            routes[i] = _inference_sample(probmat, startnode[i])
     else:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
             for i in range(count):
-                future = executor.submit(_inference_sample, probmat, startnode)
+                future = executor.submit(_inference_sample, probmat, startnode[i])
                 futures.append(future)
             for i, future in enumerate(futures):
                 routes[i] = future.result()

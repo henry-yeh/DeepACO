@@ -78,7 +78,7 @@ class ParNet(MLP):
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.emb_net = EmbNet(feats=3)
+        self.emb_net = EmbNet()
         self.par_net_heu = ParNet()
 
     def forward(self, pyg):

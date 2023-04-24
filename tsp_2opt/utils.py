@@ -56,9 +56,10 @@ def load_val_dataset(n_node, k_sparse, device, start_node = None):
         val_list.append((data, distances))
     return val_list
 
-def load_test_dataset(n_node, k_sparse, device, start_node = None):
+def load_test_dataset(n_node, k_sparse, device, start_node = None, filename = None):
     val_list = []
-    val_tensor = torch.load(f'../data/tsp/testDataset-{n_node}.pt')
+    filename = filename or f'../data/tsp/testDataset-{n_node}.pt'
+    val_tensor = torch.load(filename)
     for instance in val_tensor:
         instance = instance.to(device)
         data, distances = gen_pyg_data(instance, k_sparse=k_sparse, start_node = start_node)
