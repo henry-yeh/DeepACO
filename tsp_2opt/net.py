@@ -6,7 +6,7 @@ import torch_geometric.nn as gnn
 
 # GNN for edge embeddings
 class EmbNet(nn.Module):
-    def __init__(self, depth=12, feats=3, units=32, act_fn='silu', agg_fn='mean'): # TODO feats=1
+    def __init__(self, depth=12, feats=1, units=32, act_fn='silu', agg_fn='mean'):
         super().__init__()
         self.depth = depth
         self.feats = feats

@@ -5,6 +5,7 @@ from torch.distributions import Categorical
 from two_opt import batched_two_opt_python
 import random
 import concurrent.futures
+from functools import cached_property
 
 class ACO():
 
@@ -24,7 +25,7 @@ class ACO():
                  ):
         
         self.problem_size = len(distances)
-        self.distances  = distances.to(device)
+        self.distances = distances.to(device)
         self.n_ants = n_ants
         self.decay = decay
         self.alpha = alpha
@@ -103,7 +104,7 @@ class ACO():
                 paths = self.gen_path(require_prob=False)
 
             if self.two_opt:
-                paths = self.local_search(paths)
+                paths = self.local_search(paths, inference)
 
             costs = self.gen_path_costs(paths)
             
@@ -161,12 +162,6 @@ class ACO():
         assert (self.distances[u, v] > 0).all()
         return torch.sum(self.distances[u, v], dim=1)
     
-    def regressive_gen_path(self):
-        start = torch.zeros((self.n_ants, ), dtype = torch.long, device=self.device)
-        mask = torch.ones(size=(self.n_ants, self.problem_size), device=self.device, dtype = torch.bool)
-        pass
-
-
 
     def gen_path(self, require_prob=False):
         '''
@@ -206,8 +201,20 @@ class ACO():
         else:
             return torch.stack(paths_list)
     
-    def local_search(self, paths):
-        new_paths = batched_two_opt_python(self.distances.cpu().numpy(), paths.T.cpu().numpy(), max_iterations=self.problem_size//2)
+    @cached_property
+    def distances_numpy(self):
+        return self.distances.detach().cpu().numpy()
+
+    @cached_property
+    def heuristic_numpy(self):
+        return self.heuristic.detach().cpu().numpy()
+    
+    
+    def local_search(self, paths, inference = False):
+        heuristic_dist = 1 / (self.heuristic_numpy/self.heuristic_numpy.max() + 1e-5)
+        new_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
+        new_paths = batched_two_opt_python(heuristic_dist, new_paths, max_iterations=20)
+        new_paths = batched_two_opt_python(self.distances_numpy, new_paths, max_iterations=10000 if inference else self.problem_size//4)
         new_paths = torch.from_numpy(new_paths.T.astype(np.int64)).to(self.device)
         # paths[:self.n_ants//2] = new_paths
         return new_paths

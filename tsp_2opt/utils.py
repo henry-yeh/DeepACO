@@ -37,8 +37,10 @@ def gen_pyg_data(tsp_coordinates, k_sparse, start_node = None):
     if start_node is None:
         node_feature = tsp_coordinates
     else:
-        node_feature = torch.hstack([tsp_coordinates, torch.zeros((n_nodes,1), device=tsp_coordinates.device)])
-        node_feature[start_node, 2] = 1.0
+        # node_feature = torch.hstack([tsp_coordinates, torch.zeros((n_nodes,1), device=tsp_coordinates.device)])
+        # node_feature[start_node, 2] = 1.0
+        node_feature = torch.zeros((n_nodes,1), device=tsp_coordinates.device, dtype=tsp_coordinates.dtype)
+        node_feature[start_node, 0] = 1.0
     pyg_data = Data(x=node_feature, edge_index=edge_index, edge_attr=edge_attr)
     return pyg_data, distances
 
