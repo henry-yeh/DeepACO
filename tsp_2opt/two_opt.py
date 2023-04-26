@@ -170,6 +170,7 @@ def _two_opt_python(distmat, tour, max_iterations=1000):
 def batched_two_opt_python(dist: np.ndarray, tours: np.ndarray, max_iterations=1000):
     dist = dist.astype(np.float32)
     tours = tours.astype(np.uint16)
+    # heumat = (1 / (heuristic / heuristic.max() + 1e-6)).astype(np.float32)
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
         for tour in tours:
