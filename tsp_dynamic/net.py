@@ -6,7 +6,7 @@ import torch_geometric.nn as gnn
 
 # GNN for edge embeddings
 class EmbNet(nn.Module):
-    def __init__(self, depth=12, feats=3, units=32, act_fn='silu', agg_fn='mean'): # TODO feats=1
+    def __init__(self, depth=12, feats=3, units=32, act_fn='silu', agg_fn='mean'):
         super().__init__()
         self.depth = depth
         self.feats = feats
@@ -92,14 +92,16 @@ class Net(nn.Module):
             param.requires_grad = False
             
     @staticmethod
-    def reshape_batch(pyg_batch, vector, batch_size, p_size, k_sparse):
+    def reshape_batch(pyg_batch, vector, batch_size, problem_size, k_sparse):
         '''
         Args:
-            vector: (batch_size x p_size x k_sparse, 1) 
+            vector: (batch_size x subgraph_size x k_sparse, 1) 
         '''
         device = pyg_batch.x.device
-        matrix = torch.zeros(size=(batch_size, p_size, p_size), device=device)
-        ant_idx = torch.repeat_interleave(torch.arange(batch_size), p_size*k_sparse)
-        matrix[ant_idx, pyg_batch.edge_index[0] % p_size, pyg_batch.edge_index[1] % p_size] = vector
+        assert vector.size(0) % (batch_size * k_sparse) == 0
+        subgraph_size = vector.size(0) // (batch_size * k_sparse)
+        matrix = torch.zeros(size=(batch_size, problem_size, problem_size), device=device)
+        ant_idx = torch.repeat_interleave(torch.arange(batch_size), subgraph_size*k_sparse)
+        matrix[ant_idx, pyg_batch.edge_index[0] % problem_size, pyg_batch.edge_index[1] % problem_size] = vector
         return matrix
         
