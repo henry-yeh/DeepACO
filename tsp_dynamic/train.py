@@ -11,7 +11,9 @@ LR = 5e-4
 TEST_SIZE = 50
 K_SPARSE = {
     100: 20,
-    200: 40
+    200: 40,
+    500: 50,
+    1000: 100
 }
 
 def train_instance(models, optimizer, data, n_ants, k_sparse):
@@ -68,6 +70,7 @@ def train_epoch(n_node, n_ants, k_sparse, steps_per_epoch, nets, optimizer, batc
 def validation(n_ants, epoch, nets, val_dataset, k_sparse):
     sum_bl, sum_sample_best = 0, 0
     for coor in val_dataset:
+        coor = coor.to(DEVICE)
         bl, sample_best = infer_instance(nets, coor, n_ants, k_sparse)
         sum_bl += bl
         sum_sample_best += sample_best
@@ -81,18 +84,21 @@ def train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size, n_stage
     nets = torch.nn.ModuleList([Net(feats=1).to(DEVICE) for _ in range(n_stages)])
     optimizer = torch.optim.AdamW(nets.parameters(), lr=LR)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=epochs)
-    val_dataset = load_val_dataset(n_node).to(DEVICE)[:TEST_SIZE]
-    validation(n_ants, -1, nets, val_dataset, k_sparse)
+    val_dataset = load_val_dataset(n_node)[:TEST_SIZE]
+    at_avg_bl, at_avg_sample_best = validation(n_ants, -1, nets, val_dataset, k_sparse)
     sum_time = 0
     for epoch in range(0, epochs):
         start = time.time()
         train_epoch(n_node, n_ants, k_sparse, steps_per_epoch, nets, optimizer, batch_size)
         scheduler.step()
         sum_time += time.time() - start
-        validation(n_ants, epoch, nets, val_dataset, k_sparse)
+        avg_bl, avg_sample_best = validation(n_ants, epoch, nets, val_dataset, k_sparse)
+        if avg_sample_best < at_avg_sample_best:
+            at_avg_sample_best = avg_sample_best
+            torch.save(nets.state_dict(), f'../pretrained/tsp_dyna/tsp{n_node}-{n_stages}.pt')
+            print(f'[*] Save checkpoint {epoch}!')
     print('total training duration:', sum_time)
-        
-    # torch.save(nets.state_dict(), f'../pretrained/tsp_dyna/tsp{n_node}.pt')
+
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
