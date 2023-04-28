@@ -162,7 +162,19 @@ class ACO():
         assert (self.distances[u, v] > 0).all()
         return torch.sum(self.distances[u, v], dim=1)
     
-
+    def gen_numpy_path_costs(self, paths, numpy_distances):
+        '''
+        Args:
+            paths: numpy ndarray with shape (n_ants, problem_size), note the shape
+        Returns:
+            Lengths of paths: numpy ndarray with shape (n_ants,)
+        '''
+        assert paths.shape == (self.n_ants, self.problem_size)
+        u = paths
+        v = np.roll(u, shift=1, axis=1)  # shape: (n_ants, problem_size)
+        # assert (self.distances[u, v] > 0).all()
+        return np.sum(numpy_distances[u, v], axis=1)
+    
     def gen_path(self, require_prob=False):
         '''
         Tour contruction for all ants
@@ -213,11 +225,18 @@ class ACO():
     def local_search(self, paths, inference = False):
         heuristic_dist = 1 / (self.heuristic_numpy/self.heuristic_numpy.max() + 1e-5)
         new_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
-        new_paths = batched_two_opt_python(heuristic_dist, new_paths, max_iterations=20)
-        new_paths = batched_two_opt_python(self.distances_numpy, new_paths, max_iterations=10000 if inference else self.problem_size//4)
-        new_paths = torch.from_numpy(new_paths.T.astype(np.int64)).to(self.device)
+        
+        best_costs = self.gen_numpy_path_costs(new_paths, self.distances_numpy)
+        best_paths = new_paths.copy()
+        
+        perturbed_paths = batched_two_opt_python(heuristic_dist, new_paths, max_iterations=20)
+        new_paths = batched_two_opt_python(self.distances_numpy, perturbed_paths, max_iterations=10000 if inference else self.problem_size//4)
+        new_costs = self.gen_numpy_path_costs(new_paths, self.distances_numpy)
+        improved_indices = new_costs < best_costs
+        best_paths[improved_indices] = new_paths[improved_indices]
+        best_paths = torch.from_numpy(best_paths.T.astype(np.int64)).to(self.device)
         # paths[:self.n_ants//2] = new_paths
-        return new_paths
+        return best_paths
 
 @nb.jit(nb.uint16[:](nb.float32[:,:],nb.int64), nopython=True, nogil=True)
 def _inference_sample(probmat: np.ndarray, startnode = 0):
