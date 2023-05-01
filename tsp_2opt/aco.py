@@ -209,11 +209,14 @@ class ACO():
     def heuristic_numpy(self):
         return self.heuristic.detach().cpu().numpy()
     
+    @cached_property
+    def heuristic_dist(self):
+        return 1 / (self.heuristic_numpy/self.heuristic_numpy.max(-1) + 1e-5)
+    
     
     def local_search(self, paths, inference = False):
-        heuristic_dist = 1 / (self.heuristic_numpy/self.heuristic_numpy.max() + 1e-5)
         new_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
-        new_paths = batched_two_opt_python(heuristic_dist, new_paths, max_iterations=20)
+        new_paths = batched_two_opt_python(self.heuristic_dist, new_paths, max_iterations=20)
         new_paths = batched_two_opt_python(self.distances_numpy, new_paths, max_iterations=10000 if inference else self.problem_size//4)
         new_paths = torch.from_numpy(new_paths.T.astype(np.int64)).to(self.device)
         # paths[:self.n_ants//2] = new_paths
