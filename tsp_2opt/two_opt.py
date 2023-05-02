@@ -138,33 +138,39 @@ def batched_two_opt_numpy(dist: np.ndarray, tours: np.ndarray, max_iterations=10
             break
     return tours, iterations
 
+@nb.njit(nb.float32(nb.float32[:,:], nb.uint16[:], nb.uint16), nogil=True)
+def two_opt_once(distmat, tour, fixed_i = 0):
+    '''in-place operation'''
+    n = tour.shape[0]
+    p = q = 0
+    delta = 0
+    for i in range(1, n - 1) if fixed_i==0 else range(fixed_i, fixed_i+1):
+        for j in range(i + 1, n):
+            node_i, node_j = tour[i], tour[j]
+            node_prev, node_next = tour[i-1], tour[(j+1) % n]
+            if node_prev == node_j or node_next == node_i:
+                continue
+            change = (  distmat[node_prev, node_j] 
+                        + distmat[node_i, node_next]
+                        - distmat[node_prev, node_i] 
+                        - distmat[node_j, node_next])                    
+            if change < delta:
+                p, q, delta = i, j, change
+    if delta < -1e-6:
+        tour[p: q+1] = np.flip(tour[p: q+1])
+        return delta
+    else:
+        return 0.0
+
+
 @nb.njit(nb.uint16[:](nb.float32[:,:], nb.uint16[:], nb.int64), nogil=True)
 def _two_opt_python(distmat, tour, max_iterations=1000):
     iterations = 0
     tour = tour.copy()
-    n = tour.shape[0]
     min_change = -1.0
-    while min_change < 0 and iterations < max_iterations:
-        min_change = 0
-        p = q = 0
-        for i in range(1, n - 1):
-            for j in range(i + 1, n):
-                node_i, node_j = tour[i], tour[j]
-                node_prev, node_next = tour[i-1], tour[(j+1) % n]
-                if node_prev == node_j or node_next == node_i:
-                    continue
-                change = (  distmat[node_prev, node_j] 
-                          + distmat[node_i, node_next]
-                          - distmat[node_prev, node_i] 
-                          - distmat[node_j, node_next])                    
-                if change < min_change:
-                    min_change = change
-                    p, q = i, j
-        if min_change < -1e-6:
-            tour[p: q+1] = np.flip(tour[p: q+1])
-            iterations += 1
-        else:  
-            break
+    while min_change < -1e-6 and iterations < max_iterations:
+        min_change = two_opt_once(distmat, tour, 0)
+        iterations += 1
     return tour
 
 def batched_two_opt_python(dist: np.ndarray, tours: np.ndarray, max_iterations=1000):

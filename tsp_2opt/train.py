@@ -23,15 +23,15 @@ def train_instance(model, optimizer, data, n_ants):
             heuristic=heu_mat,
             distances=distances,
             device=device,
-            two_opt=True,
+            local_search='gls',
         )
     
         costs, log_probs, paths = aco.sample()
-        # baseline = costs.mean()
-        # reinforce_loss = torch.sum((costs - baseline) * log_probs.sum(dim=0)) / aco.n_ants
+        baseline = costs.mean()
+        reinforce_loss = torch.sum((costs - baseline) * log_probs.sum(dim=0)) / aco.n_ants
         costs_2opt, _ = aco.sample_2opt(paths)
         baseline_2opt = costs_2opt.mean()
-        cost = (costs_2opt - baseline_2opt) #* 0.9 + (costs - baseline) * 0.1
+        cost = (costs_2opt - baseline_2opt) * 0.9 + (costs - baseline) * 0.1
         reinforce_loss = torch.sum(cost.detach() * log_probs.sum(dim=0)) / aco.n_ants
         sum_loss += reinforce_loss
         count += 1
@@ -52,7 +52,7 @@ def infer_instance(model, pyg_data, distances, n_ants):
         heuristic=heu_mat.cpu(),
         distances=distances.cpu(),
         device='cpu',
-        two_opt=True,
+        local_search='gls',
         )
     costs = aco.sample(inference = True)[0]
     baseline = costs.mean()
@@ -130,13 +130,29 @@ def train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size = 3, tes
 
 if __name__ == "__main__":
     # torch.manual_seed(1234)
-    lr = 1e-4
+    lr = 2e-5
     device = 'cuda:0'
     # pretrained_path = '../pretrained/tsp_2opt/tsp500.pt'
-    pretrained_path = '../pretrained/tsp_2opt/tsp50-best.pt'
-    batch_size = 10
-    n_node, n_ants = 500, 30
-    k_sparse = 50
-    steps_per_epoch = 40
-    epochs = 100
-    train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size=batch_size, test_size = 5, pretrained = pretrained_path)
+    # pretrained_path = '../pretrained/tsp_2opt/good/tsp1000-best.pt'
+    pretrained_path = None
+    n_node = 200
+    k_sparse = n_node//10
+    epochs = 50
+
+    if n_node == 1000:
+        batch_size = 3
+        n_node, n_ants = 1000, 30
+        steps_per_epoch = 20
+        test_size = 10
+    elif n_node == 50:
+        batch_size = 40
+        n_ants = 100
+        steps_per_epoch = 30
+        test_size = 100
+    elif n_node == 200:
+        batch_size = 20
+        n_ants = 30
+        steps_per_epoch = 30
+        test_size = 20
+    
+    train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size=batch_size, test_size = test_size, pretrained = pretrained_path)

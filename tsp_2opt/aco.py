@@ -6,6 +6,7 @@ from two_opt import batched_two_opt_python
 import random
 import concurrent.futures
 from functools import cached_property
+from gls import batched_guided_local_search
 
 class ACO():
 
@@ -20,8 +21,9 @@ class ACO():
                  pheromone=None,
                  heuristic=None,
                  min=None,
-                 two_opt = True,
+                 two_opt = False, # for compatibility
                  device='cpu',
+                 local_search = None,
                  ):
         
         self.problem_size = len(distances)
@@ -48,7 +50,8 @@ class ACO():
         else:
             self.pheromone = pheromone.to(device)
         
-        self.two_opt = two_opt
+        assert local_search in [None, "2opt", "gls"]
+        self.local_search_type = '2opt' if two_opt else local_search
 
         self.heuristic = 1 / distances if heuristic is None else heuristic
 
@@ -91,7 +94,13 @@ class ACO():
         paths = self.local_search(paths)
         costs = self.gen_path_costs(paths)
         return costs, paths
-        
+    
+    def local_search(self, paths, inference = False):
+        if self.local_search_type == "2opt":
+            paths = self.two_opt(paths, inference)
+        elif self.local_search_type == "gls":
+            paths = self.guided_local_search(paths, inference)
+        return paths
 
     @torch.no_grad()
     def run(self, n_iterations, inference = False):
@@ -103,9 +112,7 @@ class ACO():
             else:
                 paths = self.gen_path(require_prob=False)
 
-            if self.two_opt:
-                paths = self.local_search(paths, inference)
-
+            paths = self.local_search(paths, inference)
             costs = self.gen_path_costs(paths)
             
             best_cost, best_idx = costs.min(dim=0)
@@ -215,18 +222,17 @@ class ACO():
     
     @cached_property
     def distances_numpy(self):
-        return self.distances.detach().cpu().numpy()
+        return self.distances.detach().cpu().numpy().astype(np.float32)
 
     @cached_property
     def heuristic_numpy(self):
-        return self.heuristic.detach().cpu().numpy()
+        return self.heuristic.detach().cpu().numpy().astype(np.float32)
     
     @cached_property
     def heuristic_dist(self):
         return 1 / (self.heuristic_numpy/self.heuristic_numpy.max(-1) + 1e-5)
     
-    
-    def local_search(self, paths, inference = False):
+    def two_opt(self, paths, inference = False):
         best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
         best_costs = self.gen_numpy_path_costs(best_paths, self.distances_numpy)
 
@@ -239,6 +245,12 @@ class ACO():
         best_paths = torch.from_numpy(best_paths.T.astype(np.int64)).to(self.device)
 
         return best_paths
+    
+    def guided_local_search(self, paths, inference = False):
+        paths_np = paths.T.cpu().numpy()
+        t = self.problem_size / (1000 if inference else 3000)
+        new_paths = batched_guided_local_search(self.distances_numpy, self.heuristic_dist, paths_np, time_limit = t)
+        return torch.from_numpy(new_paths.T.astype(np.int64)).to(self.device)
 
 @nb.jit(nb.uint16[:](nb.float32[:,:],nb.int64), nopython=True, nogil=True)
 def _inference_sample(probmat: np.ndarray, startnode = 0):
@@ -287,10 +299,11 @@ if __name__ == '__main__':
     input = torch.rand(size=(n, 2))
     distances = torch.norm(input[:, None] - input, dim=2, p=2)
     distances[torch.arange(len(distances)), torch.arange(len(distances))] = 1e10
-    aco = ACO(distances, two_opt=True, device='cpu')
+    aco = ACO(distances, device='cpu', local_search='gls')
+    # aco.networkx_graph
     aco.sparsify(k_sparse=3)
     print(timeit.timeit(lambda: aco.run(20, inference=True), number=1))
-    print(timeit.timeit(lambda: aco.run(20, inference=False), number=1))
+    # print(timeit.timeit(lambda: aco.run(20, inference=False), number=1))
     print(aco.shortest_path)
     print(aco.lowest_cost)
     # probmat = 1 / (distances+1e-5)
