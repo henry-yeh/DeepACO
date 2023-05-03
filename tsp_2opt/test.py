@@ -23,7 +23,7 @@ def infer_instance(model, pyg_data, distances, n_ants, t_aco_diff, k_sparse=None
             heuristic=heu_mat.cpu(),
             distances=distances.cpu(),
             device='cpu',
-            local_search='gls',
+            local_search='2opt',
             # elitist=True
             # min_max = True
         )
@@ -33,7 +33,7 @@ def infer_instance(model, pyg_data, distances, n_ants, t_aco_diff, k_sparse=None
             n_ants=n_ants,
             distances=distances.cpu(),
             device='cpu',
-            local_search='gls',
+            local_search='2opt',
             # elitist=True
             # min_max = True
         )
@@ -60,18 +60,18 @@ def test(dataset, model, n_ants, t_aco, k_sparse=None):
     
     return sum_results / len(dataset), end-start
 
-def compare(n_node, k_sparse = None, n_ants=30, t_aco = None):
+def compare(n_node, k_sparse = None, n_ants=48, t_aco = None):
     global device
     k_sparse = k_sparse or n_node//10
-    t_aco = None or [1, 2, 5, 10, 20, 30, 50]
+    t_aco = None or [1, 2, 5, 10, 20, 30, 40, 50]
     device = 'cpu' if n_node < 200 else 'cuda:0'
-    test_list = load_test_dataset(n_node, k_sparse, device, start_node = 0)
+    test_list = load_test_dataset(n_node, k_sparse, device, start_node = 0)[:5]
     print("number of instances:", len(test_list))
     print("device:", 'cpu' if device == 'cpu' else device+"+cpu" )
 
     print("=== MetaACO ===")
     net_tsp = Net().to(device)
-    net_tsp.load_state_dict(torch.load(f'../pretrained/tsp_2opt/tsp{n_node}-best.pt', map_location=device))
+    net_tsp.load_state_dict(torch.load(f'../pretrained/tsp_2opt/tsp{n_node}.pt', map_location=device))
     avg_aco_best, duration = test(test_list, net_tsp, n_ants, t_aco, k_sparse)
     print('total duration: ', duration)
     for i, t in enumerate(t_aco):
@@ -84,4 +84,4 @@ def compare(n_node, k_sparse = None, n_ants=30, t_aco = None):
     for i, t in enumerate(t_aco):
         print("T={}, average cost is {}.".format(t, avg_aco_best[i]))
 
-compare(200)
+compare(1000)
