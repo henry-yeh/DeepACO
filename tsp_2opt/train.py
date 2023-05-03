@@ -27,11 +27,11 @@ def train_instance(model, optimizer, data, n_ants):
         )
     
         costs, log_probs, paths = aco.sample()
-        baseline = costs.mean()
-        reinforce_loss = torch.sum((costs - baseline) * log_probs.sum(dim=0)) / aco.n_ants
+        # baseline = costs.mean()
+        # reinforce_loss = torch.sum((costs - baseline) * log_probs.sum(dim=0)) / aco.n_ants
         costs_2opt, _ = aco.sample_2opt(paths)
         baseline_2opt = costs_2opt.mean()
-        cost = (costs_2opt - baseline_2opt) * 0.9 + (costs - baseline) * 0.1
+        cost = (costs_2opt - baseline_2opt) # * 0.9 + (costs - baseline) * 0.1
         reinforce_loss = torch.sum(cost.detach() * log_probs.sum(dim=0)) / aco.n_ants
         sum_loss += reinforce_loss
         count += 1
@@ -130,18 +130,23 @@ def train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size = 3, tes
 
 if __name__ == "__main__":
     # torch.manual_seed(1234)
-    lr = 2e-5
+    lr = 1e-4
     device = 'cuda:0'
-    # pretrained_path = '../pretrained/tsp_2opt/tsp500.pt'
+    pretrained_path = '../pretrained/tsp_2opt/tsp200-last.pt'
     # pretrained_path = '../pretrained/tsp_2opt/good/tsp1000-best.pt'
-    pretrained_path = None
-    n_node = 200
+    # pretrained_path = None
+    n_node = 1000
     k_sparse = n_node//10
-    epochs = 50
+    epochs = 100
 
     if n_node == 1000:
         batch_size = 3
-        n_node, n_ants = 1000, 30
+        n_ants = 30
+        steps_per_epoch = 20
+        test_size = 5
+    elif n_node == 500:
+        batch_size = 8
+        n_ants = 30
         steps_per_epoch = 20
         test_size = 10
     elif n_node == 50:

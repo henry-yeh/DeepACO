@@ -84,16 +84,15 @@ def guided_local_search(distmat, guide, init_tour, perturbation_moves = 30, time
     k = 0.1 * init_cost / distmat.shape[0]
     penalty = np.zeros_like(distmat)
 
-    with nb.objmode(t_lim=nb.float32):
-        t_lim = time.time() + time_limit
 
     cur_tour = init_tour.copy()
     local_search(distmat, cur_tour, 0, 1000)
     cur_cost = calculate_cost(distmat, cur_tour)
     best_tour, best_cost = cur_tour, cur_cost
 
-    with nb.objmode(now=nb.float32):
+    with nb.objmode(now = nb.float32):
         now = time.time()
+    t_lim = now + time_limit
 
     while now < t_lim:
         perturbation(distmat, guide, penalty, cur_tour, k, perturbation_moves)

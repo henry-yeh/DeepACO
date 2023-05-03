@@ -230,7 +230,7 @@ class ACO():
     
     @cached_property
     def heuristic_dist(self):
-        return 1 / (self.heuristic_numpy/self.heuristic_numpy.max(-1) + 1e-5)
+        return 1 / (self.heuristic_numpy/self.heuristic_numpy.max(-1, keepdims=True) + 1e-5)
     
     def two_opt(self, paths, inference = False):
         best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
