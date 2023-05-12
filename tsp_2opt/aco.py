@@ -100,6 +100,8 @@ class ACO():
             paths = self.two_opt(paths, inference)
         elif self.local_search_type == "gls":
             paths = self.guided_local_search(paths, inference)
+        elif self.local_search_type == "nls":
+            paths = self.nls(paths, inference)
         return paths
 
     @torch.no_grad()
@@ -234,14 +236,24 @@ class ACO():
     
     def two_opt(self, paths, inference = False):
         best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
-        best_costs = self.gen_numpy_path_costs(best_paths, self.distances_numpy)
+        best_paths = torch.from_numpy(best_paths.T.astype(np.int64)).to(self.device)
 
-        perturbed_paths = batched_two_opt_python(self.heuristic_dist, best_paths, max_iterations=20)
-        new_paths = batched_two_opt_python(self.distances_numpy, perturbed_paths, max_iterations=10000 if inference else self.problem_size//4)
-        new_costs = self.gen_numpy_path_costs(new_paths, self.distances_numpy)
+        return best_paths
+    
+    def nls(self, paths, inference = False, T_nls = 10, T_p = 20):
+        best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
+        new_costs = self.gen_numpy_path_costs(best_paths, self.distances_numpy)
+        new_paths = best_paths
+        
+        for _ in range(T_nls):
+            perturbed_paths = batched_two_opt_python(self.heuristic_dist, new_paths, max_iterations=T_p)
+            new_paths = batched_two_opt_python(self.distances_numpy, perturbed_paths, max_iterations=10000 if inference else self.problem_size//4)
+            new_costs = self.gen_numpy_path_costs(new_paths, self.distances_numpy)
 
-        improved_indices = new_costs < best_costs
-        best_paths[improved_indices] = new_paths[improved_indices]
+            improved_indices = new_costs < best_costs
+            best_paths[improved_indices] = new_paths[improved_indices]
+            best_costs[improved_indices] = new_costs[improved_indices]
+        
         best_paths = torch.from_numpy(best_paths.T.astype(np.int64)).to(self.device)
 
         return best_paths
