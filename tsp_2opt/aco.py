@@ -23,7 +23,7 @@ class ACO():
                  min=None,
                  two_opt = False, # for compatibility
                  device='cpu',
-                 local_search = None,
+                 local_search = 'nls',
                  ):
         
         self.problem_size = len(distances)
@@ -50,7 +50,7 @@ class ACO():
         else:
             self.pheromone = pheromone.to(device)
         
-        assert local_search in [None, "2opt", "gls"]
+        assert local_search in [None, "2opt", "gls", "nls"]
         self.local_search_type = '2opt' if two_opt else local_search
 
         self.heuristic = 1 / distances if heuristic is None else heuristic
@@ -242,7 +242,7 @@ class ACO():
     
     def nls(self, paths, inference = False, T_nls = 10, T_p = 20):
         best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
-        new_costs = self.gen_numpy_path_costs(best_paths, self.distances_numpy)
+        best_costs = self.gen_numpy_path_costs(best_paths, self.distances_numpy)
         new_paths = best_paths
         
         for _ in range(T_nls):
