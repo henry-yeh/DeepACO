@@ -1,6 +1,7 @@
 import time
 import torch
 import numpy as np
+import os
 
 from net import Net
 from aco import ACO
@@ -23,15 +24,13 @@ def train_instance(model, optimizer, data, n_ants):
             heuristic=heu_mat,
             distances=distances,
             device=device,
-            local_search='gls',
+            local_search='nls',
         )
     
-        costs, log_probs, paths = aco.sample()
-        # baseline = costs.mean()
-        # reinforce_loss = torch.sum((costs - baseline) * log_probs.sum(dim=0)) / aco.n_ants
+        _, log_probs, paths = aco.sample()
         costs_2opt, _ = aco.sample_2opt(paths)
         baseline_2opt = costs_2opt.mean()
-        cost = (costs_2opt - baseline_2opt) # * 0.9 + (costs - baseline) * 0.1
+        cost = (costs_2opt - baseline_2opt)
         reinforce_loss = torch.sum(cost.detach() * log_probs.sum(dim=0)) / aco.n_ants
         sum_loss += reinforce_loss
         count += 1
@@ -52,7 +51,7 @@ def infer_instance(model, pyg_data, distances, n_ants):
         heuristic=heu_mat.cpu(),
         distances=distances.cpu(),
         device='cpu',
-        local_search='gls',
+        local_search='nls',
         )
     costs = aco.sample(inference = True)[0]
     baseline = costs.mean()
@@ -89,7 +88,8 @@ def validation(n_ants, epoch, net, val_dataset):
     return avg_stats
 
 
-def train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size = 3, test_size = None, pretrained = None):
+def train(n_node, n_ants, steps_per_epoch, epochs, k_sparse = None, batch_size = 3, test_size = None, pretrained = None, savepath = "../pretrained/tsp_2opt"):
+    k_sparse = k_sparse or n_node//10
     net = Net().to(device)
     if pretrained:
         net.load_state_dict(torch.load(pretrained, map_location=device))
@@ -98,11 +98,8 @@ def train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size = 3, tes
     val_list = load_val_dataset(n_node, k_sparse, device, start_node=0)
     if test_size is not None:
         val_list = val_list[:test_size]
-    # animator = Animator(xlabel='epoch', xlim=[0, epochs], figsize=(6,3),
-    #                     legend=["Avg. sample obj.", "Best sample obj.", "Best ACO obj. (T=1)", f"Best ACO obj. (T={T})"])
     
     stats = validation(n_ants, -1, net, val_list)
-    # animator.add(0, stats)
     val_results = [stats]
     best_result = (stats[-1], stats[-2], stats[-3])
     print(f'epoch 0:', stats)
@@ -118,46 +115,44 @@ def train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size = 3, tes
         scheduler.step()
         curr_result = (stats[-1], stats[-2], stats[-3])
         if curr_result <= best_result:
-            torch.save(net.state_dict(), f'../pretrained/tsp_2opt/tsp{n_node}-best.pt')
+            torch.save(net.state_dict(), os.path.join(savepath, f'tsp{n_node}-best.pt'))
             best_result = curr_result
-        torch.save(net.state_dict(), f'../pretrained/tsp_2opt/tsp{n_node}-last.pt')
+        torch.save(net.state_dict(), os.path.join(savepath, f'tsp{n_node}-last.pt'))
 
     print('\ntotal training duration:', sum_time)
     
-    # torch.save(net.state_dict(), f'../pretrained/tsp_2opt/tsp{n_node}.pt')
     return f'../pretrained/tsp_2opt/tsp{n_node}.pt'
 
 
 if __name__ == "__main__":
-    # torch.manual_seed(1234)
-    lr = 1e-4
-    device = 'cuda:0'
-    pretrained_path = '../pretrained/tsp_2opt/tsp200-last.pt'
-    # pretrained_path = '../pretrained/tsp_2opt/good/tsp1000-best.pt'
-    # pretrained_path = None
-    n_node = 1000
-    k_sparse = n_node//10
-    epochs = 100
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("nodes", metavar='N', type=int, help="Problem scale")
+    parser.add_argument("-l", "--lr", metavar='η', type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("-d", "--device", type=str, 
+                        default=("cuda:0" if torch.cuda.is_available() else "cpu"), 
+                        help="The device to train NNs")
+    parser.add_argument("-p", "--pretrained", type=str, default=None, help="Path to pretrained model")
+    parser.add_argument("-a", "--ants", type=int, default=30, help="Number of ants (in ACO algorithm)")
+    parser.add_argument("-b", "--batch_size", type=int, default=20, help="Batch size")
+    parser.add_argument("-s", "--steps", type=int, default=20, help="Steps per epoch")
+    parser.add_argument("-e", "--epochs", type=int, default=100, help="Epochs to run")
+    parser.add_argument("-t", "--test_size", type=int, default=None, help="Number of instances for testing")
+    parser.add_argument("-o", "--output", type=str, default="../pretrained/tsp_2opt",
+                        help="The directory to store checkpoints")
+    opt = parser.parse_args()
 
-    if n_node == 1000:
-        batch_size = 3
-        n_ants = 30
-        steps_per_epoch = 20
-        test_size = 5
-    elif n_node == 500:
-        batch_size = 8
-        n_ants = 30
-        steps_per_epoch = 20
-        test_size = 10
-    elif n_node == 50:
-        batch_size = 40
-        n_ants = 100
-        steps_per_epoch = 30
-        test_size = 100
-    elif n_node == 200:
-        batch_size = 20
-        n_ants = 30
-        steps_per_epoch = 30
-        test_size = 20
+    lr = opt.lr
+    device = opt.device
+    n_node = opt.nodes
     
-    train(n_node, k_sparse, n_ants, steps_per_epoch, epochs, batch_size=batch_size, test_size = test_size, pretrained = pretrained_path)
+    train(
+        opt.nodes, 
+        opt.ants, 
+        opt.steps, 
+        opt.epochs, 
+        batch_size = opt.batch_size, 
+        test_size = opt.test_size, 
+        pretrained = opt.pretrained,
+        savepath = opt.output,
+    )

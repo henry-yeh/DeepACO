@@ -6,7 +6,6 @@ from two_opt import batched_two_opt_python
 import random
 import concurrent.futures
 from functools import cached_property
-from gls import batched_guided_local_search
 
 class ACO():
 
@@ -50,7 +49,7 @@ class ACO():
         else:
             self.pheromone = pheromone.to(device)
         
-        assert local_search in [None, "2opt", "gls", "nls"]
+        assert local_search in [None, "2opt", "nls"]
         self.local_search_type = '2opt' if two_opt else local_search
 
         self.heuristic = 1 / distances if heuristic is None else heuristic
@@ -98,8 +97,6 @@ class ACO():
     def local_search(self, paths, inference = False):
         if self.local_search_type == "2opt":
             paths = self.two_opt(paths, inference)
-        elif self.local_search_type == "gls":
-            paths = self.guided_local_search(paths, inference)
         elif self.local_search_type == "nls":
             paths = self.nls(paths, inference)
         return paths
@@ -235,19 +232,21 @@ class ACO():
         return 1 / (self.heuristic_numpy/self.heuristic_numpy.max(-1, keepdims=True) + 1e-5)
     
     def two_opt(self, paths, inference = False):
-        best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
+        maxt = 10000 if inference else self.problem_size//4
+        best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=maxt)
         best_paths = torch.from_numpy(best_paths.T.astype(np.int64)).to(self.device)
 
         return best_paths
     
     def nls(self, paths, inference = False, T_nls = 10, T_p = 20):
-        best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=10000 if inference else self.problem_size//4)
+        maxt = 10000 if inference else self.problem_size//4
+        best_paths = batched_two_opt_python(self.distances_numpy, paths.T.cpu().numpy(), max_iterations=maxt)
         best_costs = self.gen_numpy_path_costs(best_paths, self.distances_numpy)
         new_paths = best_paths
         
         for _ in range(T_nls):
             perturbed_paths = batched_two_opt_python(self.heuristic_dist, new_paths, max_iterations=T_p)
-            new_paths = batched_two_opt_python(self.distances_numpy, perturbed_paths, max_iterations=10000 if inference else self.problem_size//4)
+            new_paths = batched_two_opt_python(self.distances_numpy, perturbed_paths, max_iterations=maxt)
             new_costs = self.gen_numpy_path_costs(new_paths, self.distances_numpy)
 
             improved_indices = new_costs < best_costs
@@ -257,12 +256,6 @@ class ACO():
         best_paths = torch.from_numpy(best_paths.T.astype(np.int64)).to(self.device)
 
         return best_paths
-    
-    def guided_local_search(self, paths, inference = False):
-        paths_np = paths.T.cpu().numpy()
-        t = self.problem_size / (1000 if inference else 3000)
-        new_paths = batched_guided_local_search(self.distances_numpy, self.heuristic_dist, paths_np, time_limit = t)
-        return torch.from_numpy(new_paths.T.astype(np.int64)).to(self.device)
 
 @nb.jit(nb.uint16[:](nb.float32[:,:],nb.int64), nopython=True, nogil=True)
 def _inference_sample(probmat: np.ndarray, startnode = 0):
@@ -302,24 +295,5 @@ def inference_batch_sample(probmat: np.ndarray, count=1, startnode = None):
             for i, future in enumerate(futures):
                 routes[i] = future.result()
     return routes
-
-
-if __name__ == '__main__':
-    import timeit
-    n = 100
-    torch.set_printoptions(precision=3, sci_mode=False)
-    input = torch.rand(size=(n, 2))
-    distances = torch.norm(input[:, None] - input, dim=2, p=2)
-    distances[torch.arange(len(distances)), torch.arange(len(distances))] = 1e10
-    aco = ACO(distances, device='cpu', local_search='gls')
-    # aco.networkx_graph
-    aco.sparsify(k_sparse=3)
-    print(timeit.timeit(lambda: aco.run(20, inference=True), number=1))
-    # print(timeit.timeit(lambda: aco.run(20, inference=False), number=1))
-    print(aco.shortest_path)
-    print(aco.lowest_cost)
-    # probmat = 1 / (distances+1e-5)
-    # t = timeit.timeit(lambda: inference_batch_sample(probmat.numpy(), 4, 0), number=100)
-    # print("execution:", t)
 
     
