@@ -1,4 +1,4 @@
-# MetaACO: Neural-enhanced Ant Systems for Combinatorial Optimization
+# DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization
 
 ### Dependencies
 
@@ -11,3 +11,6 @@
 - [networkx](https://networkx.org/) 2.8.4
 - [numpy](https://numpy.org/) 1.23.3
 - [numba](https://numba.pydata.org/) 0.56.4
+
+### How to use
+Please refer to `./tsp_2opt/` for DeepACO with NLS on the TSP, and to other directories for vanilla DeepACO on each combinatorial optimization problem.
