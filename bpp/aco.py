@@ -43,6 +43,9 @@ def cal_fitness(s: np.ndarray, demand: np.ndarray, n_bins: np.ndarray):
 
 class ACO():
 
+    # Levine, J., & Ducatelle, F. (2004). Ant colony optimization and local search for bin packing and cutting stock problems. 
+    # Journal of the Operational Research society, 55(7), 705-716.
+
     def __init__(self,  # 0: depot
                  demand,   # (n, )
                  n_ants=20, 
