@@ -1,6 +1,6 @@
 # [NeurIPS 2023] DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization
 
-Welcome! This repository contains official code implementation of paper [*DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization*](). DeepACO is a generic framework that leverages deep reinforcement learning to automate heuristic designs. It serves to strengthen the heuristic measures of existing ACO algorithms and dispense with laborious manual design in future ACO applications.
+Welcome! This repository contains the code implementation of paper [*DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization*](). DeepACO is a generic framework that leverages deep reinforcement learning to automate heuristic designs. It serves to strengthen the heuristic measures of existing ACO algorithms and dispense with laborious manual design in future ACO applications.
 
 ![diagram](./diagram.png)
 
