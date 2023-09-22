@@ -1,4 +1,11 @@
-# DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization
+# [NeurIPS 2023] DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization
+
+Welcome! This repository contains official code implementation of paper [*DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization*](). DeepACO is a generic framework that leverages deep reinforcement learning to automate heuristic designs. It serves to strengthen the heuristic measures of existing ACO algorithms and dispense with laborious manual design in future ACO applications.
+
+![diagram](./diagram.png)
+
+
+---
 
 ### Dependencies
 
@@ -12,5 +19,31 @@
 - [numpy](https://numpy.org/) 1.23.3
 - [numba](https://numba.pydata.org/) 0.56.4
 
-### How to use
-Please refer to `./tsp_2opt/` for DeepACO with NLS on the TSP, and to other directories for vanilla DeepACO on each combinatorial optimization problem.
+---
+
+### Usage
+- **Traveling Salesman Problem (TSP).** Please refer to [`tsp/`](./tsp/) for vanilla DeepACO and [`tsp_2opt/`](./tsp_2opt/) for DeepACO with NLS on TSP.
+- **Capacitated Vehicle Routing Problem (CVRP).** Please refer to [`cvrp/`](./cvrp/) for vanilla DeepACO and [`cvrp_nls/`](./cvrp_nls/) for DeepACO with NLS on CVRP.
+- **Orienteering Problem (OP).** Please refer to [`op/`](./op/).
+- **Prize Collecting Travelling Salesman Problem (PCTSP).** Please refer to [`pctsp/`](./pctsp/).
+- **Sequential Ordering Problem (SOP).** Please refer to [`sop/`](./sop/).
+- **Single Machine Total Weighted Tardiness Problem (SMTWTP).** Please refer to [`smtwtp/`](./smtwtp/).
+- **Resource-Constrained Project Scheduling Problem (RCPSP).** Please refer to [`rcpsp/`](./rcpsp/).
+- **Multiple Knapsack Problem (MKP).** Please refer to [`mkp/`](./mkp/) for the implementation of pheromone model $PH_{suc}$ and [`mkp_transformer/`](./mkp_transformer/) for that of $PH_{items}$.
+- **Bin Packing Problem (BPP).** Please refer to [`bpp/`](./bpp/).
+
+----
+
+
+🤩 If you encounter any difficulty using our code, please do not hesitate to submit an issue or contact us! Any advice on improving the code would be greatly appreciated!
+
+😍 If you do find our code helpful, please consider kindly giving a star, and citing our paper.
+
+```bibtex
+@article{ye2023deepaco,
+  title={DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization},
+  author={Ye, Haoran and Wang, Jiarui and Cao, Zhiguang and Liang, Helan and Li, Yong},
+  journal={Advances in Neural Information Processing Systems},
+  year={2023}
+}
+```
