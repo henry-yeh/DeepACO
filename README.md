@@ -22,15 +22,15 @@ Welcome! This repository contains official code implementation of paper [*DeepAC
 ---
 
 ### Usage
-- **Traveling Salesman Problem (TSP).** Please refer to [`tsp/`](./tsp/) for vanilla DeepACO and [`tsp_2opt/`](./tsp_2opt/) for DeepACO with NLS on TSP.
-- **Capacitated Vehicle Routing Problem (CVRP).** Please refer to [`cvrp/`](./cvrp/) for vanilla DeepACO and [`cvrp_nls/`](./cvrp_nls/) for DeepACO with NLS on CVRP.
-- **Orienteering Problem (OP).** Please refer to [`op/`](./op/).
-- **Prize Collecting Travelling Salesman Problem (PCTSP).** Please refer to [`pctsp/`](./pctsp/).
-- **Sequential Ordering Problem (SOP).** Please refer to [`sop/`](./sop/).
-- **Single Machine Total Weighted Tardiness Problem (SMTWTP).** Please refer to [`smtwtp/`](./smtwtp/).
-- **Resource-Constrained Project Scheduling Problem (RCPSP).** Please refer to [`rcpsp/`](./rcpsp/).
-- **Multiple Knapsack Problem (MKP).** Please refer to [`mkp/`](./mkp/) for the implementation of pheromone model $PH_{suc}$ and [`mkp_transformer/`](./mkp_transformer/) for that of $PH_{items}$.
-- **Bin Packing Problem (BPP).** Please refer to [`bpp/`](./bpp/).
+- **Traveling Salesman Problem (TSP).** Please refer to `tsp/` for vanilla DeepACO and `tsp_2opt/` for DeepACO with NLS on TSP.
+- **Capacitated Vehicle Routing Problem (CVRP).** Please refer to `cvrp/` for vanilla DeepACO and `cvrp_nls/` for DeepACO with NLS on CVRP.
+- **Orienteering Problem (OP).** Please refer to `op/`.
+- **Prize Collecting Travelling Salesman Problem (PCTSP).** Please refer to `pctsp/`.
+- **Sequential Ordering Problem (SOP).** Please refer to `sop/`.
+- **Single Machine Total Weighted Tardiness Problem (SMTWTP).** Please refer to `smtwtp/`.
+- **Resource-Constrained Project Scheduling Problem (RCPSP).** Please refer to `rcpsp/`.
+- **Multiple Knapsack Problem (MKP).** Please refer to `mkp/` for the implementation of pheromone model $PH_{suc}$ and `mkp_transformer/` for that of $PH_{items}$.
+- **Bin Packing Problem (BPP).** Please refer to `bpp/`.
 
 ----
 
