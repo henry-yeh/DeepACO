@@ -1,8 +1,8 @@
-## DeepACO with NLS
+## DeepACO with NLS for TSP
 
 ### Training
 
-The checkpoints will be saved in [`../pretrained/tsp_2opt`](../pretrained/tsp_2opt) with suffix `-best.pt` and `-last.pt` by default.
+The checkpoints will be saved in [`../pretrained/tsp_nls`](../pretrained/tsp_nls) with suffix `-best.pt` and `-last.pt` by default.
 
 TSP200:
 ```raw

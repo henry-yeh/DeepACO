@@ -287,6 +287,7 @@ class ACO():
         return self.positions.cpu().numpy() if self.positions is not None else None
     
     # ======== code for adaptive elitist AS ========
+    # These code are unrelated to DeepACO, and are kept for comparisons.
     def insertion_single(self, route, index):
         # route starts from 0, terminates with 0
         insertion_cost = (((self.distances[p1, index]+self.distances[index,p2]-self.distances[p1, p2]).item(), i) 

@@ -205,6 +205,7 @@ class ACO():
         return (visit_mask[:, 1:] == 0).all() and (actions == 0).all()    
     
     # ======== code for adaptive elitist AS ========
+    # These code are unrelated to DeepACO, and are kept for comparisons.
     def get_subroutes(self, route, end_with_zero = True):
         x = torch.nonzero(route == 0).flatten()
         subroutes = []

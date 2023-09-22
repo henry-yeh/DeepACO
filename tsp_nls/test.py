@@ -69,11 +69,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("nodes", type=int, help="Problem scale")
-    parser.add_argument("-m", "--model", type=str, default=None, help="Path to checkpoint file, default to '../pretrained/tsp_2opt/tsp{nodes}.pt'")
+    parser.add_argument("-m", "--model", type=str, default=None, help="Path to checkpoint file, default to '../pretrained/tsp_nls/tsp{nodes}.pt'")
     opt = parser.parse_args()
     n_nodes = opt.nodes
 
-    filepath = opt.model or f'../pretrained/tsp_2opt/tsp{n_nodes}.pt'
+    filepath = opt.model or f'../pretrained/tsp_nls/tsp{n_nodes}.pt'
     if not os.path.isfile(filepath):
         print(f"Checkpoint file '{filepath}' not found!")
         exit(1)

@@ -22,7 +22,7 @@ Welcome! This repository contains the code implementation of paper [*DeepACO: Ne
 ---
 
 ### Usage
-- **Traveling Salesman Problem (TSP).** Please refer to `tsp/` for vanilla DeepACO and `tsp_2opt/` for DeepACO with NLS on TSP.
+- **Traveling Salesman Problem (TSP).** Please refer to `tsp/` for vanilla DeepACO and `tsp_nls/` for DeepACO with NLS on TSP.
 - **Capacitated Vehicle Routing Problem (CVRP).** Please refer to `cvrp/` for vanilla DeepACO and `cvrp_nls/` for DeepACO with NLS on CVRP.
 - **Orienteering Problem (OP).** Please refer to `op/`.
 - **Prize Collecting Travelling Salesman Problem (PCTSP).** Please refer to `pctsp/`.

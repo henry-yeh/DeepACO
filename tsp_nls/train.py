@@ -88,7 +88,7 @@ def validation(n_ants, epoch, net, val_dataset):
     return avg_stats
 
 
-def train(n_node, n_ants, steps_per_epoch, epochs, k_sparse = None, batch_size = 3, test_size = None, pretrained = None, savepath = "../pretrained/tsp_2opt"):
+def train(n_node, n_ants, steps_per_epoch, epochs, k_sparse = None, batch_size = 3, test_size = None, pretrained = None, savepath = "../pretrained/tsp_nls"):
     k_sparse = k_sparse or n_node//10
     net = Net().to(device)
     if pretrained:
@@ -121,7 +121,7 @@ def train(n_node, n_ants, steps_per_epoch, epochs, k_sparse = None, batch_size =
 
     print('\ntotal training duration:', sum_time)
     
-    return f'../pretrained/tsp_2opt/tsp{n_node}.pt'
+    return f'../pretrained/tsp_nls/tsp{n_node}.pt'
 
 
 if __name__ == "__main__":
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--steps", type=int, default=20, help="Steps per epoch")
     parser.add_argument("-e", "--epochs", type=int, default=100, help="Epochs to run")
     parser.add_argument("-t", "--test_size", type=int, default=None, help="Number of instances for testing")
-    parser.add_argument("-o", "--output", type=str, default="../pretrained/tsp_2opt",
+    parser.add_argument("-o", "--output", type=str, default="../pretrained/tsp_nls",
                         help="The directory to store checkpoints")
     opt = parser.parse_args()
 
