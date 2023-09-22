@@ -22,15 +22,15 @@ Welcome! This repository contains the code implementation of paper [*DeepACO: Ne
 ---
 
 ### Usage
-- **Traveling Salesman Problem (TSP).** Please refer to [`tsp/`](./tsp) for vanilla DeepACO and [`tsp_nls/`](./tsp_nls) for DeepACO with NLS on TSP.
-- **Capacitated Vehicle Routing Problem (CVRP).** Please refer to [`cvrp/`](./cvrp) for vanilla DeepACO and [`cvrp_nls/`](./cvrp_nls) for DeepACO with NLS on CVRP.
-- **Orienteering Problem (OP).** Please refer to [`op/`](./op).
-- **Prize Collecting Travelling Salesman Problem (PCTSP).** Please refer to [`pctsp/`](./pctsp).
-- **Sequential Ordering Problem (SOP).** Please refer to [`sop/`](./sop).
-- **Single Machine Total Weighted Tardiness Problem (SMTWTP).** Please refer to [`smtwtp/`](./smtwtp).
-- **Resource-Constrained Project Scheduling Problem (RCPSP).** Please refer to [`rcpsp/`](./rcpsp).
-- **Multiple Knapsack Problem (MKP).** Please refer to [`mkp/`](./mkp) for the implementation of pheromone model $PH_{suc}$ and [`mkp_transformer/`](./mkp_transformer) for that of $PH_{items}$.
-- **Bin Packing Problem (BPP).** Please refer to [`bpp/`](./bpp).
+- **Traveling Salesman Problem (TSP).** Please refer to [`tsp/`](/henry-yeh/DeepACO/tree/main/tsp) for vanilla DeepACO and [`tsp_nls/`](/henry-yeh/DeepACO/tree/main/tsp_nls) for DeepACO with NLS on TSP.
+- **Capacitated Vehicle Routing Problem (CVRP).** Please refer to [`cvrp/`](/henry-yeh/DeepACO/tree/main/cvrp) for vanilla DeepACO and [`cvrp_nls/`](/henry-yeh/DeepACO/tree/main/cvrp_nls) for DeepACO with NLS on CVRP.
+- **Orienteering Problem (OP).** Please refer to [`op/`](/henry-yeh/DeepACO/tree/main/op).
+- **Prize Collecting Travelling Salesman Problem (PCTSP).** Please refer to [`pctsp/`](/henry-yeh/DeepACO/tree/main/pctsp).
+- **Sequential Ordering Problem (SOP).** Please refer to [`sop/`](/henry-yeh/DeepACO/tree/main/sop).
+- **Single Machine Total Weighted Tardiness Problem (SMTWTP).** Please refer to [`smtwtp/`](/henry-yeh/DeepACO/tree/main/smtwtp).
+- **Resource-Constrained Project Scheduling Problem (RCPSP).** Please refer to [`rcpsp/`](/henry-yeh/DeepACO/tree/main/rcpsp).
+- **Multiple Knapsack Problem (MKP).** Please refer to [`mkp/`](/henry-yeh/DeepACO/tree/main/mkp) for the implementation of pheromone model $PH_{suc}$ and [`mkp_transformer/`](/henry-yeh/DeepACO/tree/main/mkp_transformer) for that of $PH_{items}$.
+- **Bin Packing Problem (BPP).** Please refer to [`bpp/`](/henry-yeh/DeepACO/tree/main/bpp).
 
 ----
 
