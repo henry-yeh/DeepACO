@@ -1,6 +1,6 @@
 # [NeurIPS 2023] DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization
 
-Welcome! This repository contains the code implementation of paper [*DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization*](). DeepACO is a generic framework that leverages deep reinforcement learning to automate heuristic designs. It serves to strengthen the heuristic measures of existing ACO algorithms and dispense with laborious manual design in future ACO applications.
+**Welcome!** This repository contains the code implementation of paper [*DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization*](https://arxiv.org/abs/2309.14032). DeepACO is a generic framework that leverages deep reinforcement learning to automate heuristic designs. It serves to strengthen the heuristic measures of existing ACO algorithms and dispense with laborious manual design in future ACO applications.
 
 ![diagram](./diagram.png)
 
@@ -35,15 +35,15 @@ Welcome! This repository contains the code implementation of paper [*DeepACO: Ne
 ----
 
 
-🤩 If you encounter any difficulty using our code, please do not hesitate to submit an issue or contact us! Any advice on improving the code would be greatly appreciated!
+🤩 If you encounter any difficulty using our code, please do not hesitate to submit an issue or directly contact us! Clearly, we still have a long way to go to write beautiful code, any advice on improving our code would be greatly appreciated!
 
-😍 If you do find our code helpful, please consider kindly giving a star, and citing our paper.
+😍 If you do find our code helpful (or if you would be so kind as to offer us some encouragement), please consider kindly giving a star, and citing our paper.
 
 ```bibtex
-@article{ye2023deepaco,
+@inproceedings{ye2023deepaco,
   title={DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization},
   author={Ye, Haoran and Wang, Jiarui and Cao, Zhiguang and Liang, Helan and Li, Yong},
-  journal={Advances in Neural Information Processing Systems},
+  booktitle={Advances in Neural Information Processing Systems},
   year={2023}
 }
 ```
