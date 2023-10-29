@@ -35,7 +35,7 @@
 ----
 
 
-🤩 If you encounter any difficulty using our code, please do not hesitate to submit an issue or directly contact us! Clearly, we still have a long way to go to write beautiful code, any advice on improving our code would be greatly appreciated!
+🤩 If you encounter any difficulty using our code, please do not hesitate to submit an issue or directly contact us!
 
 😍 If you do find our code helpful (or if you would be so kind as to offer us some encouragement), please consider kindly giving a star, and citing our paper.
 
