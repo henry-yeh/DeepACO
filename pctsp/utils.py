@@ -50,10 +50,10 @@ def load_test_dataset(n_node, device):
 if __name__ == "__main__":
     torch.manual_seed(123456)
     import pathlib
-    pathlib.Path('./data/pctsp').mkdir(parents=False, exist_ok=True) 
+    pathlib.Path('../data/pctsp').mkdir(parents=False, exist_ok=True) 
     for n in [20, 100, 500]:
         testDataset = []
         for _ in range(100):
             dist_mat, prizes, penalties = gen_inst(n, 'cpu')
             testDataset.append(torch.cat([dist_mat, prizes.unsqueeze(0), penalties.unsqueeze(0)], dim=0))
-        torch.save(torch.stack(testDataset), f"data/pctsp/testDataset-{n}.pt")
+        torch.save(torch.stack(testDataset), f"../data/pctsp/testDataset-{n}.pt")

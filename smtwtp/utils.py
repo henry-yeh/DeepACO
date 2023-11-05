@@ -32,7 +32,7 @@ def load_test_dataset(n_node, device):
 if __name__ == '__main__':
     torch.manual_seed(123456)
     import pathlib
-    pathlib.Path('./data/smtwtp').mkdir(parents=False, exist_ok=True) 
+    pathlib.Path('../data/smtwtp').mkdir(parents=False, exist_ok=True) 
     problem_sizes = [50, 100, 500]
     dataset_size = 100
     for p_size in problem_sizes:
@@ -40,5 +40,5 @@ if __name__ == '__main__':
         for _ in range(dataset_size):        
             pyg_data, due_time, weights, processing_time = instance_gen(p_size, 'cpu')
             dataset.append([pyg_data, due_time, weights, processing_time])
-        with open(f"data/smtwtp/test{p_size}.pkl", "wb") as f:
+        with open(f"../data/smtwtp/test{p_size}.pkl", "wb") as f:
             pickle.dump(dataset, f)

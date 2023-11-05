@@ -71,11 +71,13 @@ def load_test_dataset(n_node, k_sparse, device):
     return val_list
 
 if __name__ == "__main__":
+    import pathlib
+    pathlib.Path('../data/op').mkdir(parents=False, exist_ok=True) 
     torch.manual_seed(12345)
     for problem_size in [100, 200, 300]:
         coor = torch.rand(size=(30, problem_size, 2))
-        torch.save(coor, f"data/op/valDataset-{problem_size}.pt")
+        torch.save(coor, f"../data/op/valDataset-{problem_size}.pt")
     torch.manual_seed(123456)
     for problem_size in [100, 200, 300]:
         coor = torch.rand(size=(100, problem_size, 2))
-        torch.save(coor, f"data/op/testDataset-{problem_size}.pt")
+        torch.save(coor, f"../data/op/testDataset-{problem_size}.pt")

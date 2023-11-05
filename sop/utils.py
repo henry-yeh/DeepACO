@@ -66,6 +66,8 @@ def load_test_dataset(n_node, device):
     return loaded_list
 
 if __name__ == "__main__":
+    import pathlib
+    pathlib.Path('../data/sop').mkdir(parents=False, exist_ok=True) 
     torch.manual_seed(123456)
     problem_sizes = [20, 50, 100]
     dataset_size = 100
@@ -74,7 +76,7 @@ if __name__ == "__main__":
         for _ in range(dataset_size):        
             distances, adj_mat, mask = training_instance_gen(p_size, 'cpu')
             dataset.append([distances, adj_mat, mask])
-        with open(f"data/sop/test{p_size}.pkl", "wb") as f:
+        with open(f"../data/sop/test{p_size}.pkl", "wb") as f:
             pickle.dump(dataset, f)
     
     

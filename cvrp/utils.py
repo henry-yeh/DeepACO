@@ -41,7 +41,7 @@ def load_test_dataset(problem_size, device):
 
 if __name__ == '__main__':
     import pathlib
-    pathlib.Path('./data/cvrp').mkdir(parents=False, exist_ok=True) 
+    pathlib.Path('../data/cvrp').mkdir(parents=False, exist_ok=True) 
     torch.manual_seed(123456)
     for n in [20, 100, 500]:
         inst_list = []
@@ -50,5 +50,5 @@ if __name__ == '__main__':
             inst = torch.cat((demands.unsqueeze(0), distances), dim=0) # (n+2, n+1)
             inst_list.append(inst)
         testDataset = torch.stack(inst_list)
-        torch.save(testDataset, f'./data/cvrp/testDataset-{n}.pt')
+        torch.save(testDataset, f'../data/cvrp/testDataset-{n}.pt')
         

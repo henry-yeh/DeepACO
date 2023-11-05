@@ -1,1 +1,1 @@
-Run utils.py to generate test datasets.
+Run `python utils.py` to generate test datasets.

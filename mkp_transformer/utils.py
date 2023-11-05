@@ -46,7 +46,7 @@ def load_test_dataset(problem_size, device):
 if __name__ == '__main__':
     # generate val and test dataset
     import pathlib
-    pathlib.Path('./data/mkp_transformer').mkdir(parents=False, exist_ok=True) 
+    pathlib.Path('../data/mkp_transformer').mkdir(parents=False, exist_ok=True) 
     
     torch.manual_seed(12345)
     for problem_size in [300, 500]:
@@ -55,7 +55,7 @@ if __name__ == '__main__':
             price, weight = gen_instance(problem_size, 5)
             testDataset.append(torch.cat((price.unsqueeze(0), weight), dim=0))
         testDataset = torch.stack(testDataset)
-        torch.save(testDataset, f'./data/mkp_transformer/valDataset-{problem_size}.pt')
+        torch.save(testDataset, f'../data/mkp_transformer/valDataset-{problem_size}.pt')
     
     torch.manual_seed(123456)
     for problem_size in [300, 500]:
@@ -64,7 +64,7 @@ if __name__ == '__main__':
             price, weight = gen_instance(problem_size, 5)
             testDataset.append(torch.cat((price.unsqueeze(0), weight), dim=0))
         testDataset = torch.stack(testDataset)
-        torch.save(testDataset, f'./data/mkp_transformer/testDataset-{problem_size}.pt')
+        torch.save(testDataset, f'../data/mkp_transformer/testDataset-{problem_size}.pt')
             
     
     
