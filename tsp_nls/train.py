@@ -10,6 +10,7 @@ from utils import gen_pyg_data, load_val_dataset
 
 EPS = 1e-10
 T=5
+W=0.95
 
 def train_instance(model, optimizer, data, n_ants):
     model.train()
@@ -26,11 +27,12 @@ def train_instance(model, optimizer, data, n_ants):
             device=device,
             local_search='nls',
         )
-    
-        _, log_probs, paths = aco.sample()
+
+        costs, log_probs, paths = aco.sample()
+        baseline = costs.mean()
         costs_2opt, _ = aco.sample_2opt(paths)
         baseline_2opt = costs_2opt.mean()
-        cost = (costs_2opt - baseline_2opt)
+        cost = (costs_2opt - baseline_2opt) * W + (costs - baseline) * (1 - W)
         reinforce_loss = torch.sum(cost.detach() * log_probs.sum(dim=0)) / aco.n_ants
         sum_loss += reinforce_loss
         count += 1
@@ -128,7 +130,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("nodes", metavar='N', type=int, help="Problem scale")
-    parser.add_argument("-l", "--lr", metavar='η', type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("-l", "--lr", metavar='η', type=float, default=6e-4, help="Learning rate")
     parser.add_argument("-d", "--device", type=str, 
                         default=("cuda:0" if torch.cuda.is_available() else "cpu"), 
                         help="The device to train NNs")
@@ -136,11 +138,14 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--ants", type=int, default=30, help="Number of ants (in ACO algorithm)")
     parser.add_argument("-b", "--batch_size", type=int, default=20, help="Batch size")
     parser.add_argument("-s", "--steps", type=int, default=20, help="Steps per epoch")
-    parser.add_argument("-e", "--epochs", type=int, default=100, help="Epochs to run")
-    parser.add_argument("-t", "--test_size", type=int, default=None, help="Number of instances for testing")
+    parser.add_argument("-e", "--epochs", type=int, default=20, help="Epochs to run")
+    parser.add_argument("-t", "--test_size", type=int, default=None, help="Number of instances for validation")
     parser.add_argument("-o", "--output", type=str, default="../pretrained/tsp_nls",
                         help="The directory to store checkpoints")
     opt = parser.parse_args()
+    
+    if os.path.isdir(opt.output) is False:
+        os.mkdir(opt.output)        
 
     lr = opt.lr
     device = opt.device
