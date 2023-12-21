@@ -9,8 +9,8 @@ from utils import gen_pyg_data, load_val_dataset
 
 
 EPS = 1e-10
-T=5
-W=0.95
+T = 5
+W = 0.95
 
 def train_instance(model, optimizer, data, n_ants):
     model.train()
