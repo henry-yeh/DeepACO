@@ -1,11 +1,14 @@
 # [NeurIPS 2023] DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization
 
-**Welcome!** This repository contains the code implementation of paper [*DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization*](https://arxiv.org/abs/2309.14032). DeepACO is a generic framework that leverages deep reinforcement learning to automate heuristic designs. It serves to strengthen the heuristic measures of existing ACO algorithms and dispense with laborious manual design in future ACO applications.
+🥳 **Welcome!** This codebase accompanies the paper [*DeepACO: Neural-enhanced Ant Systems for Combinatorial Optimization*](https://arxiv.org/abs/2309.14032). 
+
+## 🚀 Introduction
+DeepACO is a generic framework that leverages deep reinforcement learning to automate heuristic designs. It serves to strengthen the heuristic measures of existing ACO algorithms and dispense with laborious manual design in future ACO applications.
 
 ![diagram](./diagram.png)
 
 
----
+## 🔑 Usage
 
 ### Dependencies
 
@@ -19,9 +22,8 @@
 - [numpy](https://numpy.org/) 1.23.3
 - [numba](https://numba.pydata.org/) 0.56.4
 
----
+### Available Problems
 
-### Usage
 - **Traveling Salesman Problem (TSP).** Please refer to [`tsp/`](/henry-yeh/DeepACO/tree/main/tsp) for vanilla DeepACO and [`tsp_nls/`](/henry-yeh/DeepACO/tree/main/tsp_nls) for DeepACO with NLS on TSP.
 - **Capacitated Vehicle Routing Problem (CVRP).** Please refer to [`cvrp/`](/henry-yeh/DeepACO/tree/main/cvrp) for vanilla DeepACO and [`cvrp_nls/`](/henry-yeh/DeepACO/tree/main/cvrp_nls) for DeepACO with NLS on CVRP.
 - **Orienteering Problem (OP).** Please refer to [`op/`](/henry-yeh/DeepACO/tree/main/op).
@@ -32,12 +34,17 @@
 - **Multiple Knapsack Problem (MKP).** Please refer to [`mkp/`](/henry-yeh/DeepACO/tree/main/mkp) for the implementation of pheromone model $PH_{suc}$ and [`mkp_transformer/`](/henry-yeh/DeepACO/tree/main/mkp_transformer) for that of $PH_{items}$.
 - **Bin Packing Problem (BPP).** Please refer to [`bpp/`](/henry-yeh/DeepACO/tree/main/bpp).
 
-----
 
+## 🎥 Resources
 
-🤩 If you encounter any difficulty using our code, please do not hesitate to submit an issue or directly contact us!
+- [Video and slides](https://neurips.cc/virtual/2023/poster/71083)
+- [Video-Chinese](https://www.bilibili.com/video/BV1Pv42117mQ)
+- [Blog-Chinese](https://zhuanlan.zhihu.com/p/659645922)
 
-😍 If you do find our code helpful (or if you would be so kind as to offer us some encouragement), please consider kindly giving a star, and citing our paper.
+## 🤩 Citation
+If you encounter any difficulty using our code, please do not hesitate to submit an issue or directly contact us!
+
+If you do find our code helpful (or if you would be so kind as to offer us some encouragement), please consider kindly giving a star, and citing our paper.
 
 ```bibtex
 @inproceedings{ye2023deepaco,
