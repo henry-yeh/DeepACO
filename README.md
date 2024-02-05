@@ -37,6 +37,8 @@ DeepACO is a generic framework that leverages deep reinforcement learning to aut
 
 ## 🎥 Resources
 
+You may be interested in [ReEvo: Large Language Models as Hyper-Heuristics with Reflective Evolution](https://github.com/ai4co/LLM-as-HH). ReEvo leverages large language models to automate heuristic designs under a reflective evolution framework. It outperforms DeepACO in terms of the scalability and generality of the heuristics.
+
 - [Video and slides](https://neurips.cc/virtual/2023/poster/71083)
 - [Video-Chinese](https://www.bilibili.com/video/BV1Pv42117mQ)
 - [Blog-Chinese](https://zhuanlan.zhihu.com/p/659645922)
