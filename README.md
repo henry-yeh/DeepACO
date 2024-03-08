@@ -12,6 +12,7 @@ DeepACO is a generic framework that leverages deep reinforcement learning to aut
 
 ### Dependencies
 
+- Python 3.8
 - CUDA 11.0 (Using a CPU works just as well 🥺)
 - PyTorch 1.7.0
 - [PyTorch Scatter](https://github.com/rusty1s/pytorch_scatter) 2.0.7
