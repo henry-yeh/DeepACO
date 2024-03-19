@@ -38,7 +38,9 @@ DeepACO is a generic framework that leverages deep reinforcement learning to aut
 
 ## 🎥 Resources
 
-You may be interested in [ReEvo: Large Language Models as Hyper-Heuristics with Reflective Evolution](https://github.com/ai4co/LLM-as-HH). ReEvo leverages large language models to automate heuristic designs under a reflective evolution framework. It outperforms DeepACO in terms of the scalability and generality of the heuristics.
+- You may be interested in [ReEvo: Large Language Models as Hyper-Heuristics with Reflective Evolution](https://github.com/ai4co/LLM-as-HH). ReEvo leverages large language models to automate heuristic designs under a reflective evolution framework. It outperforms DeepACO in terms of the scalability and generality of the heuristics.
+
+- You may be interested in [Ant Colony Sampling with GFlowNets for Combinatorial Optimization](https://github.com/ai4co/gfacs) by Minsu Kim, Sanghyeok Choi, Jiwoo Son, Hyeonah Kim, Jinkyoo Park, and Yoshua Bengio, which suggests that DeepACO can be improved by training with GFlowNets.
 
 - [Video and slides](https://neurips.cc/virtual/2023/poster/71083)
 - [Video-Chinese](https://www.bilibili.com/video/BV1Pv42117mQ)
